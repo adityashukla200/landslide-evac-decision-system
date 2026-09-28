@@ -1,0 +1,90 @@
+{
+  "class_conditional_coverage": {
+    "positive_class_coverage_pct": 81.11,
+    "negative_class_coverage_pct": 91.04,
+    "target_coverage_pct": 90.0,
+    "mean_interval_width": 0.000193,
+    "median_interval_width": 2.8e-05
+  },
+  "binned_coverage": [
+    {
+      "bin": "[0.0000, 0.0010)",
+      "count": 34959,
+      "empirical_rate": 6e-05,
+      "mean_lower": 0.0,
+      "mean_upper": 5e-05,
+      "contains": true
+    },
+    {
+      "bin": "[0.0010, 0.0050)",
+      "count": 4210,
+      "empirical_rate": 0.00285,
+      "mean_lower": 0.00155,
+      "mean_upper": 0.00186,
+      "contains": true
+    },
+    {
+      "bin": "[0.0050, 0.0150)",
+      "count": 3995,
+      "empirical_rate": 0.00901,
+      "mean_lower": 0.00981,
+      "mean_upper": 0.01032,
+      "contains": true
+    },
+    {
+      "bin": "[0.0150, 0.0500)",
+      "count": 548,
+      "empirical_rate": 0.03832,
+      "mean_lower": 0.01926,
+      "mean_upper": 0.02209,
+      "contains": false
+    },
+    {
+      "bin": "[0.0500, 1.0000)",
+      "count": 88,
+      "empirical_rate": 0.21591,
+      "mean_lower": 0.16709,
+      "mean_upper": 0.18766,
+      "contains": false
+    }
+  ],
+  "tier_counts": {
+    "EVACUATE": 44,
+    "WARNING": 285,
+    "WATCH": 307,
+    "NONE": 43164
+  },
+  "alert_burden": {
+    "EVACUATE": {
+      "cumulative_alerts": 44,
+      "alerts_per_village_year": 8.8,
+      "tp": 18,
+      "fp": 26,
+      "fn": 72,
+      "pod": 0.2,
+      "far": 0.5909,
+      "csi": 0.1552
+    },
+    "WARNING": {
+      "cumulative_alerts": 329,
+      "alerts_per_village_year": 65.8,
+      "tp": 32,
+      "fp": 297,
+      "fn": 58,
+      "pod": 0.3556,
+      "far": 0.9027,
+      "csi": 0.0827
+    },
+    "WATCH": {
+      "cumulative_alerts": 636,
+      "alerts_per_village_year": 127.2,
+      "tp": 40,
+      "fp": 596,
+      "fn": 50,
+      "pod": 0.4444,
+      "far": 0.9371,
+      "csi": 0.0583
+    }
+  },
+  "diagnostic_plot": "C:\\Users\\shukl\\OneDrive\\Desktop\\PS192\\docs\\conformal_coverage.png"
+}

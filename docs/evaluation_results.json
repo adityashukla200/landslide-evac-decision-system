@@ -1,0 +1,115 @@
+{
+  "evaluation_protocol": "Time-Ordered Validation (2019-2021 Train, 2022 Calib) + Spatial/Temporal Holdout (2023 Unseen Storms, 5 Unseen Villages)",
+  "dataset_type": "Synthetic (Physics-guided simulated data)",
+  "train_rows": 526080,
+  "calib_rows": 175200,
+  "test_rows": 43800,
+  "test_positive_events": 90,
+  "climatology_positive_rate": 0.001597,
+  "climatology_brier_score": 0.002051,
+  "calibration": {
+    "chosen_method": "isotonic",
+    "validation_metrics": {
+      "method": "isotonic",
+      "brier_uncalibrated": 0.011144479736685753,
+      "brier_isotonic": 0.001456320402212441,
+      "brier_platt": 0.0014720757026225328,
+      "brier_chosen": 0.001456320402212441
+    },
+    "test_raw_ece": 0.031102,
+    "test_calibrated_ece": 0.00044,
+    "test_raw_brier": 0.011464,
+    "test_calibrated_brier": 0.001901,
+    "brier_skill_score_raw": -4.59,
+    "brier_skill_score_calibrated": 0.073,
+    "is_bss_positive": true
+  },
+  "analog_retrieval": {
+    "library_size": 52,
+    "embedding_comparison": {
+      "num_events_evaluated": 35,
+      "embedding_dimension": 16,
+      "autoencoder_final_reconstruction_mse": 0.007195,
+      "embedding_space_pairwise_correlation": 0.4256,
+      "summary": "Evaluated 35 events across 16-D handcrafted and autoencoder embeddings. Autoencoder converged to MSE 0.007195 with pairwise similarity alignment of 0.43."
+    },
+    "blend_evaluation": {
+      "optimal_alpha": 0.9998,
+      "base_model_weight_pct": 99.98,
+      "analog_weight_pct": 0.02,
+      "climatology_brier_score": 0.002051,
+      "base_model_brier_score": 0.001901,
+      "blended_model_brier_score": 0.001901,
+      "base_model_bss": 0.073,
+      "blended_model_bss": 0.073,
+      "delta_brier": -0.0,
+      "delta_bss": 0.0001,
+      "improved_brier": true,
+      "improved_bss": true,
+      "honest_assessment": "The analog blend slightly improved the Brier score by 0.000000 and BSS by +0.0001 (from 0.0730 to 0.0730). However, the optimal blend weight strongly favored the base model (alpha = 0.9998), confirming that the analog engine's primary role is qualitative explainability rather than probability recalibration."
+    }
+  },
+  "matched_operating_points": {
+    "matched_pod_operating_point": {
+      "threshold": 0.01187,
+      "model_pod": 0.5444,
+      "model_far": 0.9567,
+      "model_csi": 0.0418,
+      "baseline_pod": 0.5667,
+      "baseline_far": 0.9647,
+      "baseline_csi": 0.0344,
+      "delta_csi": 0.0074,
+      "delta_far": -0.008
+    },
+    "matched_far_operating_point": {
+      "threshold": 0.01187,
+      "model_pod": 0.5444,
+      "model_far": 0.9567,
+      "model_csi": 0.0418,
+      "baseline_pod": 0.5667,
+      "baseline_far": 0.9647,
+      "baseline_csi": 0.0344,
+      "delta_pod": -0.0222,
+      "delta_csi": 0.0074
+    },
+    "baseline_summary": {
+      "pod": 0.5667,
+      "far": 0.9647,
+      "csi": 0.0344
+    }
+  },
+  "baseline": {
+    "pod": 0.5667,
+    "far": 0.9647,
+    "csi": 0.0344,
+    "roc_auc": 0.9225,
+    "pr_auc": 0.07,
+    "brier_score": 0.024449,
+    "tp": 51,
+    "fp": 1393,
+    "fn": 39,
+    "tn": 42317,
+    "avg_lead_time_hours": 3.47
+  },
+  "xgboost_model_at_matched_pod": {
+    "pod": 0.5111,
+    "far": 0.9473,
+    "csi": 0.0502,
+    "roc_auc": 0.9469,
+    "pr_auc": 0.1328,
+    "brier_score": 0.001901,
+    "tp": 46,
+    "fp": 827,
+    "fn": 44,
+    "tn": 42883,
+    "avg_lead_time_hours": 3.36
+  },
+  "fitted_baseline_params": {
+    "rain_3h": 42.0,
+    "rain_24h": 115.0
+  },
+  "plots": {
+    "calibration_curve": "calibration_curve.png",
+    "precision_recall_curve": "precision_recall_curve.png"
+  }
+}
