@@ -47,10 +47,7 @@ export const ScenarioBar: React.FC = () => {
   return (
     <div className="bg-slate-900/95 border-b border-slate-800 px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 text-xs font-mono">
       <div className="flex items-center gap-2 text-slate-300 font-bold uppercase tracking-wider">
-        <PlayCircle className="w-4 h-4 text-orange-400 animate-pulse" />
-        <span className="text-[11px] bg-orange-950 text-orange-300 px-2 py-0.5 rounded border border-orange-700/60">
-          SIH DEMO MODE
-        </span>
+        <PlayCircle className="w-4 h-4 text-orange-400" />
         <span className="hidden sm:inline text-slate-400 font-normal text-xs">Simulate Disaster Lifecycle:</span>
       </div>
 

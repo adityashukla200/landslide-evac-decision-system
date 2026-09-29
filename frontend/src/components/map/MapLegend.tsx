@@ -1,10 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Info, X } from 'lucide-react';
 
 export const MapLegend: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-950/95 hover:bg-slate-900 border border-slate-800 text-slate-200 hover:text-white text-xs font-mono shadow-2xl backdrop-blur transition-all active:scale-95"
+        title="Open Map Legend"
+      >
+        <Info className="w-4 h-4 text-orange-400" />
+        <span className="font-bold">Legend</span>
+      </button>
+    );
+  }
+
   return (
-    <div className="bg-slate-950/95 border border-slate-800 rounded-lg p-3 text-xs font-mono shadow-xl backdrop-blur select-none">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-2">
-        Operational Map Legend
+    <div className="bg-slate-950/95 border border-slate-800 rounded-lg p-3 text-xs font-mono shadow-2xl backdrop-blur select-none max-w-xs">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 text-slate-300 font-bold">
+        <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+          Operational Map Legend
+        </div>
+        <button
+          onClick={() => setIsOpen(false)}
+          className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          title="Minimize Legend"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       <div className="space-y-1.5">

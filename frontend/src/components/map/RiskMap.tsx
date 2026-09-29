@@ -384,16 +384,6 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       {/* Map Canvas Container */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Floating Header Banner */}
-      <div className="absolute top-3 left-3 z-20 pointer-events-none flex items-center gap-2">
-        <div className="bg-slate-950/90 border border-slate-800 backdrop-blur px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 shadow-xl pointer-events-auto flex items-center gap-2">
-          <Navigation className="w-3.5 h-3.5 text-orange-400" />
-          <span>UTTARKASHI CATCHMENT GIS</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-emerald-400 font-bold">25 WARDS ACTIVE</span>
-        </div>
-      </div>
-
       {/* Floating Map Navigation Controls (Top Right) */}
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5">
         <button
