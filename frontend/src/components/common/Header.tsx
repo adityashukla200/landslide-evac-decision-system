@@ -63,10 +63,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-sm sm:text-base font-black tracking-wider text-slate-100 uppercase font-mono">
-                SIH-26192 <span className="text-orange-500">DISASTER EWS</span>
+                HYPER-LOCAL <span className="text-orange-500">FLASHFLOOD PREDICTION</span>
               </h1>
               <span className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-950 text-red-400 border border-red-800/60 uppercase tracking-widest font-mono">
-                MHA / NDRF
+                SIH 2026, PS 26192
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">

@@ -1,4 +1,4 @@
-# Early Warning System for Flash Floods & Landslides in Hilly Regions
+# Hyper-Local FlashFlood Prediction
 
 > **Smart India Hackathon (SIH 2026) | Problem Statement 26192**  
 > **Ministry of Home Affairs (MHA) / National Disaster Response Force (NDRF)**  

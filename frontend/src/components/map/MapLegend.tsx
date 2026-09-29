@@ -46,6 +46,14 @@ export const MapLegend: React.FC = () => {
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 ring-1 ring-amber-200" />
             <span className="text-slate-300">Telemetry Sensor Station</span>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-300" />
+            <span className="text-slate-300">Ground-Truth: Flood Reported</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-200" />
+            <span className="text-slate-300">Ground-Truth: False Alarm / Safe</span>
+          </div>
         </div>
       </div>
     </div>

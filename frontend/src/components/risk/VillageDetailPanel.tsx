@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Village, Route, Shelter } from '../../types';
 import { RiskBadge } from '../common/RiskBadge';
 import { RiskTimeline } from './RiskTimeline';
+import { reportService, CitizenReportItem } from '../../services/reportService';
 import {
   X,
   AlertOctagon,
@@ -15,6 +17,10 @@ import {
   Droplets,
   CloudRain,
   Compass,
+  Camera,
+  Check,
+  Play,
+  ExternalLink,
 } from 'lucide-react';
 
 interface VillageDetailPanelProps {
@@ -32,6 +38,26 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
   onClose,
   onTriggerAlert,
 }) => {
+  const [citizenReports, setCitizenReports] = useState<CitizenReportItem[]>([]);
+  const [loadingReports, setLoadingReports] = useState<boolean>(false);
+  const [activeMedia, setActiveMedia] = useState<CitizenReportItem | null>(null);
+
+  useEffect(() => {
+    if (!village) return;
+    setLoadingReports(true);
+    reportService.getCitizenReports(village.id).then((reports) => {
+      setCitizenReports(reports);
+      setLoadingReports(false);
+    });
+  }, [village?.id]);
+
+  const handleUpdateStatus = async (reportId: string, newStatus: 'verified' | 'rejected') => {
+    await reportService.updateCitizenReportStatus(reportId, newStatus, 'DEOC Officer');
+    setCitizenReports((prev) =>
+      prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+    );
+  };
+
   if (!village) return null;
 
   const { risk, explanation } = { risk: village.risk, explanation: village.risk.explanation };
@@ -211,8 +237,183 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
               </div>
             )}
           </div>
+
+          {/* Citizen Ground-Truth Reports Panel */}
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                <Camera className="w-4 h-4 text-orange-400" />
+                <span>CITIZEN GROUND-TRUTH REPORTS</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-orange-400 font-mono font-bold">
+                {citizenReports.length}
+              </span>
+            </div>
+
+            {loadingReports ? (
+              <div className="text-slate-500 text-[10px] text-center py-3">Loading observations...</div>
+            ) : citizenReports.length === 0 ? (
+              <div className="text-center py-3 space-y-2">
+                <p className="text-slate-500 text-[11px]">No citizen field reports for this village yet.</p>
+                <Link
+                  to="/report"
+                  className="inline-flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-bold"
+                >
+                  <span>Submit Ground-Truth Observation</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {citizenReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80 flex gap-2.5 items-start hover:border-slate-700 transition-colors"
+                  >
+                    {/* Media Thumbnail */}
+                    <div
+                      onClick={() => setActiveMedia(report)}
+                      className="relative w-16 h-16 rounded-md overflow-hidden bg-black flex-shrink-0 cursor-pointer border border-slate-800 group"
+                    >
+                      <img
+                        src={report.thumbnail_url || report.media_url}
+                        alt="Evidence"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      {report.media_type === 'video' && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <Play className="w-4 h-4 text-white fill-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Metadata & Controls */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                            report.reported_flood
+                              ? 'bg-red-950 text-red-400 border border-red-800/60'
+                              : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                          }`}
+                        >
+                          {report.reported_flood ? '🌊 Flood / Slide' : '✅ Safe / No Flood'}
+                        </span>
+
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-mono ${
+                            report.status === 'verified'
+                              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                              : report.status === 'rejected'
+                              ? 'bg-red-950/60 text-red-400 border border-red-800'
+                              : 'bg-amber-950/60 text-amber-400 border border-amber-800'
+                          }`}
+                        >
+                          {report.status}
+                        </span>
+                      </div>
+
+                      {report.caption && (
+                        <p className="text-[10px] text-slate-300 truncate" title={report.caption}>
+                          {report.caption}
+                        </p>
+                      )}
+
+                      <div className="text-[9px] text-slate-500 flex items-center justify-between">
+                        <span>
+                          {report.distance_from_village_km !== null
+                            ? `${report.distance_from_village_km} km from center`
+                            : 'Near village'}
+                        </span>
+                        <span>
+                          {report.created_at
+                            ? new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : ''}
+                        </span>
+                      </div>
+
+                      {/* Officer Quick Actions: Verify / Reject */}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(report.id, 'verified')}
+                          disabled={report.status === 'verified'}
+                          className={`flex-1 py-1 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                            report.status === 'verified'
+                              ? 'bg-emerald-950/40 text-emerald-600 cursor-not-allowed'
+                              : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60'
+                          }`}
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>Verify</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(report.id, 'rejected')}
+                          disabled={report.status === 'rejected'}
+                          className={`flex-1 py-1 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                            report.status === 'rejected'
+                              ? 'bg-red-950/40 text-red-600 cursor-not-allowed'
+                              : 'bg-red-950 hover:bg-red-900 text-red-300 border border-red-700/60'
+                          }`}
+                        >
+                          <X className="w-3 h-3" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Full Media Lightbox Modal */}
+      {activeMedia && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-3 p-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div>
+                <h4 className="font-bold text-slate-100 text-xs font-mono">
+                  {activeMedia.reported_flood ? '🌊 FLOOD REPORT' : '✅ SAFE REPORT'} — {activeMedia.village_name || 'Observation'}
+                </h4>
+                <span className="text-[10px] text-slate-400">
+                  {activeMedia.latitude.toFixed(4)}°N, {activeMedia.longitude.toFixed(4)}°E •{' '}
+                  {activeMedia.distance_from_village_km} km away
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveMedia(null)}
+                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+              {activeMedia.media_type === 'video' ? (
+                <video src={activeMedia.media_url} controls autoPlay className="max-h-full max-w-full" />
+              ) : (
+                <img src={activeMedia.media_url} alt="Evidence" className="max-h-full max-w-full object-contain" />
+              )}
+            </div>
+
+            {activeMedia.caption && (
+              <p className="text-xs text-slate-300 italic bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                "{activeMedia.caption}"
+              </p>
+            )}
+
+            <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+              <span>Status: <strong className="text-slate-200 uppercase">{activeMedia.status}</strong></span>
+              <span>Reporter: {activeMedia.reporter_phone || 'Anonymous'}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-900/90 sticky bottom-0">

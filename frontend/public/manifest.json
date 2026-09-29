@@ -1,7 +1,7 @@
 {
-  "name": "SIH-26192 Disaster Early Warning & Evacuation PWA",
-  "short_name": "Disaster EWS",
-  "description": "Multi-Hazard Flash Flood & Landslide Decision & Evacuation Guidance for Hilly Catchments",
+  "name": "Hyper-Local FlashFlood Prediction",
+  "short_name": "FlashFlood EWS",
+  "description": "Hyper-Local FlashFlood Prediction & Evacuation Guidance — SIH 2026, PS 26192",
   "start_url": "/citizen",
   "display": "standalone",
   "background_color": "#020617",

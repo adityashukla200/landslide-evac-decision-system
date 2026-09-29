@@ -5,6 +5,7 @@ import { Village, Route, Shelter, Sensor } from '../../types';
 import { LayerControl, ActiveLayers } from './LayerControl';
 import { MapLegend } from './MapLegend';
 import { Maximize2, Minimize2, ZoomIn, ZoomOut, Navigation } from 'lucide-react';
+import { getCitizenReports, CitizenReportItem } from '../../services/reportService';
 
 interface RiskMapProps {
   villages: Village[];
@@ -32,12 +33,36 @@ export const RiskMap: React.FC<RiskMapProps> = ({
 
   const [layers, setLayers] = useState<ActiveLayers>({
     villages: true,
+    citizenReports: true,
     sensors: true,
     routes: true,
     shelters: true,
     rainHeatmap: true,
     baseLayer: 'dark',
   });
+
+  const [citizenReports, setCitizenReports] = useState<CitizenReportItem[]>([]);
+
+  // Fetch live citizen reports
+  useEffect(() => {
+    let mounted = true;
+    const fetchReports = async () => {
+      try {
+        const res = await getCitizenReports({ limit: 100 });
+        if (mounted && res && res.items) {
+          setCitizenReports(res.items);
+        }
+      } catch (err) {
+        console.warn('Failed to load citizen reports for map:', err);
+      }
+    };
+    fetchReports();
+    const interval = setInterval(fetchReports, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -214,6 +239,130 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       });
     }
   }, [villages, mapLoaded]);
+
+  // Update Citizen Reports GeoJSON layer
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const m = map.current;
+
+    const citizenGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: citizenReports.map((r) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [r.longitude, r.latitude],
+        },
+        properties: {
+          id: r.id,
+          reported_flood: r.reported_flood,
+          color: r.reported_flood ? '#ef4444' : '#10b981',
+          status: r.status,
+          village_name: r.village_name || 'Ground Report',
+          distance: r.distance_from_village_km != null ? `${r.distance_from_village_km} km` : '',
+          media_type: r.media_type,
+          caption: r.caption || '',
+          created_at: r.created_at || '',
+          accuracy: r.accuracy_meters ? `${Math.round(r.accuracy_meters)}m` : 'N/A',
+          thumbnail_url: r.thumbnail_url || '',
+        },
+      })),
+    };
+
+    if (m.getSource('citizen-reports-source')) {
+      (m.getSource('citizen-reports-source') as maplibregl.GeoJSONSource).setData(citizenGeoJson);
+    } else {
+      m.addSource('citizen-reports-source', {
+        type: 'geojson',
+        data: citizenGeoJson,
+      });
+
+      // Glow layer
+      m.addLayer({
+        id: 'citizen-reports-glow',
+        type: 'circle',
+        source: 'citizen-reports-source',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 10, 14, 20],
+          'circle-color': ['get', 'color'],
+          'circle-opacity': 0.45,
+          'circle-blur': 0.5,
+        },
+      });
+
+      // Dot pin
+      m.addLayer({
+        id: 'citizen-reports-circle',
+        type: 'circle',
+        source: 'citizen-reports-source',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 6, 14, 9],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+
+      // Popup on Click
+      m.on('click', 'citizen-reports-circle', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const feat = e.features[0];
+        const props = feat.properties as any;
+        const coords = (feat.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+
+        const isFlood = props.reported_flood === true || props.reported_flood === 'true';
+        const badgeColor = isFlood ? '#dc2626' : '#059669';
+        const badgeText = isFlood ? '🚨 FLOOD ACTIVE' : '✅ NO FLOOD / SAFE';
+        const thumbHtml = props.thumbnail_url
+          ? `<div style="overflow:hidden;border-radius:4px;border:1px solid #334155;margin-bottom:6px;"><img src="${props.thumbnail_url}" style="width:100%;height:110px;object-fit:cover;display:block;" /></div>`
+          : '';
+
+        new maplibregl.Popup({ offset: 12, maxWidth: '240px', className: 'citizen-popup' })
+          .setLngLat(coords)
+          .setHTML(`
+            <div style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0f172a;color:#f8fafc;padding:10px;border-radius:8px;border:1px solid #334155;box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px;">
+                <span style="background:${badgeColor};color:#ffffff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">
+                  ${badgeText}
+                </span>
+                <span style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;background:#1e293b;padding:2px 5px;border-radius:3px;">
+                  ${props.status}
+                </span>
+              </div>
+              ${thumbHtml}
+              ${props.caption ? `<p style="font-size:11px;color:#cbd5e1;margin:0 0 6px 0;line-height:1.4;font-style:italic;">"${props.caption}"</p>` : ''}
+              <div style="font-size:10px;color:#94a3b8;border-top:1px solid #1e293b;padding-top:4px;line-height:1.4;">
+                <div><b>Area:</b> ${props.village_name} ${props.distance ? `(${props.distance})` : ''}</div>
+                <div><b>GPS Accuracy:</b> ${props.accuracy}</div>
+                <div><b>Time:</b> ${props.created_at ? new Date(props.created_at).toLocaleTimeString() : 'Recent'}</div>
+              </div>
+            </div>
+          `)
+          .addTo(m);
+      });
+
+      // Hover Pointer
+      m.on('mouseenter', 'citizen-reports-circle', () => {
+        m.getCanvas().style.cursor = 'pointer';
+      });
+      m.on('mouseleave', 'citizen-reports-circle', () => {
+        m.getCanvas().style.cursor = '';
+      });
+    }
+  }, [citizenReports, mapLoaded]);
+
+  // Sync Citizen Reports visibility with layer toggle
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const m = map.current;
+    const vis = layers.citizenReports ? 'visible' : 'none';
+    if (m.getLayer('citizen-reports-circle')) {
+      m.setLayoutProperty('citizen-reports-circle', 'visibility', vis);
+    }
+    if (m.getLayer('citizen-reports-glow')) {
+      m.setLayoutProperty('citizen-reports-glow', 'visibility', vis);
+    }
+  }, [layers.citizenReports, mapLoaded]);
 
   // Fly to selected village
   useEffect(() => {

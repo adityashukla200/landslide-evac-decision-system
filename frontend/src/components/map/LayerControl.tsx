@@ -7,6 +7,7 @@ export interface ActiveLayers {
   routes: boolean;
   shelters: boolean;
   rainHeatmap: boolean;
+  citizenReports: boolean;
   baseLayer: 'dark' | 'terrain' | 'satellite';
 }
 
@@ -60,6 +61,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
         <div className="space-y-1">
           {[
             { key: 'villages', label: 'Village Risk Polygons', count: '25' },
+            { key: 'citizenReports', label: 'Citizen Ground Reports', count: 'Live' },
             { key: 'routes', label: 'Evacuation Trails & Cuts', count: '4' },
             { key: 'shelters', label: 'High-Ground Shelters', count: '4' },
             { key: 'sensors', label: 'IoT Telemetry Sensors', count: '6' },

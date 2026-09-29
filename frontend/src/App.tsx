@@ -21,6 +21,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { HealthPage } from './pages/HealthPage';
 import { CitizenPWA } from './pages/CitizenPWA';
 import { TouristMode } from './pages/TouristMode';
+import { CitizenReportPage } from './pages/CitizenReportPage';
 
 const MainLayout: React.FC<{ onOpenAlertModal: () => void }> = ({ onOpenAlertModal }) => {
   return (
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
         {/* Full-screen Standalone Mobile / Public Experiences */}
         <Route path="/citizen" element={<CitizenPWA />} />
         <Route path="/tourist" element={<TouristMode />} />
+        <Route path="/report" element={<CitizenReportPage />} />
 
         {/* Command Center Operational Routes */}
         <Route

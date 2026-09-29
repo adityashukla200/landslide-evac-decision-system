@@ -1,6 +1,6 @@
 # Data Provenance & Specification Document
 
-**Project**: Hilly-Region Flash Flood & Landslide Early Warning System (SIH 2026, PS 26192, MHA/NDRF)  
+**Project**: Hyper-Local FlashFlood Prediction (SIH 2026, PS 26192, MHA/NDRF)  
 **Pilot District**: Uttarkashi, Uttarakhand
 
 ---

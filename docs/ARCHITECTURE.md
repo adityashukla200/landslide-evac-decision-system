@@ -1,7 +1,7 @@
 # System Architecture & Technical Specifications
 
-> **SIH 2026 Problem Statement 26192**  
-> Early Warning System for Flash Floods & Landslides in Hilly Regions
+> **Hyper-Local FlashFlood Prediction — SIH 2026, PS 26192**  
+> Ministry of Home Affairs (MHA) / National Disaster Response Force (NDRF)
 
 ---
 

@@ -1,6 +1,6 @@
-# Project Progress Log: Hilly-Region Flash Flood & Landslide Early Warning System
+# Project Progress Log: Hyper-Local FlashFlood Prediction
 
-**Project**: SIH 2026, PS 26192, MHA/NDRF  
+**Project**: Hyper-Local FlashFlood Prediction (SIH 2026, PS 26192, MHA/NDRF)  
 **Pilot District**: Uttarkashi, Uttarakhand (Bhagirathi, Yamuna, Kamal, and Tons Valleys)
 
 ---
@@ -745,18 +745,69 @@ python -m pytest tests/ -v
 
 ---
 
-### 3. Verification Results
-- **Full Test Suite**: **70/70 tests passed** across all 10 test modules in 137.9s:
-  - `tests/test_alerting.py`: **12/12 passed**
-  - `tests/test_evacuation.py`: **8/8 passed**
-  - `tests/test_thresholds.py`: **6/6 passed**
-  - `tests/test_uncertainty.py`: **6/6 passed**
-  - `tests/test_analog.py`: **7/7 passed**
-  - `tests/test_models.py`: **7/7 passed**
-  - `tests/test_physics.py`: **6/6 passed**
-  - `tests/test_connectors.py`: **7/7 passed**
-  - `tests/test_ml_data.py`: **6/6 passed**
-  - `tests/test_scaffold.py`: **5/5 passed**
+## Task 9: Citizen Ground-Truth Reporting Feature (Completed)
+
+### 1. What Was Done
+- **Database Model (`backend/app/db/models.py`)**:
+  - Added `CitizenReport` table:
+    - Primary key UUID `id`, `village_id` (foreign key to `villages.id`, nullable), `latitude`, `longitude`, `accuracy_meters`.
+    - `media_type` (`'photo'` / `'video'`), `file_path`, `thumbnail_path`.
+    - `caption`, `reported_flood` (boolean: True for flood active, False for false alarm/safe).
+    - `reporter_phone` (stored securely, masked in responses).
+    - `status` (`'pending'`, `'verified'`, `'rejected'`, `'duplicate'`), `created_at`, `reviewed_by`, `reviewed_at`, `audit_log`.
+- **Upload & Media Validation (`backend/app/services/citizen_reports.py`)**:
+  - File extension & MIME type validation: `.jpg`, `.jpeg`, `.png`, `.heic` (max 20MB) and `.mp4`, `.mov` (max 60MB). Rejecting any other extensions.
+  - Safe segregated storage in `data/uploads/citizen_reports/{year}/{month}/` outside web root.
+  - Auto-generated thumbnails: 320px JPEG thumbnails using Pillow for photos; ffmpeg extraction for videos with graceful fallback if ffmpeg is unavailable.
+  - EXIF GPS Extraction & Complete Privacy Stripping: extracts EXIF GPS if coordinate params are omitted, and completely strips all camera/device EXIF metadata before disk write (DPDP Act 2023 compliance).
+  - Reverse Spatial Mapping: Computes haversine distance to all seeded villages; maps to nearest village if $\le 25\text{km}$.
+  - Abuse Protection: Rolling window rate limiter (max 5 reports per 15 minutes per IP or phone).
+  - Computer Vision classifier stub hook for future automated flood depth and water boundary detection.
+- **REST Endpoints (`backend/app/api/endpoints/citizen_reports.py`)**:
+  - `POST /api/v1/reports/citizen`: Multipart submission endpoint.
+  - `GET /api/v1/reports`: Filterable query endpoint (`village_id`, `status`, `since`, `reported_flood`, `limit`) with masked phone numbers.
+  - `GET /api/v1/reports/{id}/media` & `GET /api/v1/reports/{id}/thumbnail`: Streaming file endpoints.
+  - `PUT /api/v1/reports/{id}/status`: Officer review endpoint (`verified`, `rejected`, `duplicate`) with audit trail logging.
+- **Frontend Mobile Citizen PWA (`frontend/src/pages/CitizenReportPage.tsx` & `/report` route)**:
+  - Mobile-first single-tap UI with bilingual toggle (English and Hindi).
+  - Camera & gallery upload supporting both photos and short videos.
+  - Device GPS auto-fetch with manual coordinate fallback input.
+  - Progress bar for uploads with XMLHttpRequest progress events.
+  - Offline sync queue: locally queues reports in `localStorage` when network is disconnected and auto-synchronizes sequentially upon reconnection.
+- **Officer Incident Dashboard & GIS Map**:
+  - `VillageDetailPanel.tsx`: Added Citizen Ground-Truth Reports panel with thumbnail gallery, flood vs false alarm tags, distance from village center, and 1-click Verify/Reject controls.
+  - `RiskMap.tsx`: Live MapLibre GeoJSON layer displaying citizen report pins with pulsing glow (Red = Flood Active, Green = Safe / False Alarm), interactive popup with photo preview, timestamp, GPS accuracy, and toggle in `LayerControl.tsx`.
+- **Automated Tests (`tests/test_citizen_reports.py`)**:
+  - 13 comprehensive tests covering valid uploads, video uploads, invalid types, oversized files, EXIF GPS extraction and stripping, village mapping within/outside 25km, rate limiting (429), filter queries, officer review & audit logging, and media streaming.
+
+---
+
+## Task 10: Product Rebranding to "Hyper-Local FlashFlood Prediction" (Completed)
+
+### 1. What Was Done
+- **Frontend App Title & Meta Description**:
+  - Updated `frontend/index.html`:
+    - `<title>` set to `"Hyper-Local FlashFlood Prediction — SIH 2026, PS 26192"`.
+    - `<meta name="description">` set to `"Hyper-Local FlashFlood Prediction — SIH 2026, PS 26192"`.
+- **PWA Manifest (`frontend/public/manifest.json`)**:
+  - `name`: `"Hyper-Local FlashFlood Prediction"`.
+  - `short_name`: `"FlashFlood EWS"`.
+  - `description`: `"Hyper-Local FlashFlood Prediction & Evacuation Guidance — SIH 2026, PS 26192"`.
+- **Mission Control Header & Brand Logo (`frontend/src/components/common/Header.tsx`)**:
+  - Main title updated to `HYPER-LOCAL FLASHFLOOD PREDICTION`.
+  - Subtitle badge updated to `SIH 2026, PS 26192`.
+- **Citizen PWA (`frontend/src/pages/CitizenPWA.tsx`)**:
+  - Header branding updated to `HYPER-LOCAL FLASHFLOOD PREDICTION` (English) and `हाइपर-लोकल फ्लैशबाढ़ पूर्वसूचना` (Hindi).
+  - Subtitle updated to `SIH 2026, PS 26192 • Uttarkashi Pilot`.
+  - Added `document.title` initialization to `"Hyper-Local FlashFlood Prediction — Citizen Advisory"`.
+- **Citizen Report Page (`frontend/src/pages/CitizenReportPage.tsx`)**:
+  - Added `document.title` initialization to `"Hyper-Local FlashFlood Prediction — Report"`.
+- **Documentation Rebranding**:
+  - `README.md`, `docs/README.md`, `docs/ARCHITECTURE.md`, `docs/DATA.md`, `docs/DEMO_SCRIPT.md`, and `docs/FRONTEND.md` updated with the new brand title and subtitle `"SIH 2026, PS 26192"`.
+- **walkthrough.md**:
+  - Rebranded title and references to `"Hyper-Local FlashFlood Prediction"`.
+
+
 
 
 

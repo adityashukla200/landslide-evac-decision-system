@@ -15,6 +15,7 @@ import {
   Radio,
   Share2,
   Languages,
+  Camera,
 } from 'lucide-react';
 
 export const CitizenPWA: React.FC = () => {
@@ -25,6 +26,10 @@ export const CitizenPWA: React.FC = () => {
   const [hasCheckedInSafe, setHasCheckedInSafe] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportText, setReportText] = useState('');
+
+  React.useEffect(() => {
+    document.title = 'Hyper-Local FlashFlood Prediction — Citizen Advisory';
+  }, []);
 
   const currentVillage = villages.find((v) => v.id === selectedVillageId) || villages[0];
   const tier = currentVillage.risk.tier;
@@ -117,9 +122,9 @@ export const CitizenPWA: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xs font-bold font-mono tracking-wide text-slate-200">
-              {language === 'hi' ? 'आपदा पूर्व चेतावनी सेवा' : 'EARLY WARNING CITIZEN APP'}
+              {language === 'hi' ? 'हाइपर-लोकल फ्लैशबाढ़ पूर्वसूचना' : 'HYPER-LOCAL FLASHFLOOD PREDICTION'}
             </h1>
-            <span className="text-[10px] text-slate-400 font-mono">NDRF • Uttarkashi Pilot</span>
+            <span className="text-[10px] text-slate-400 font-mono">SIH 2026, PS 26192 • Uttarkashi Pilot</span>
           </div>
         </div>
 
@@ -280,13 +285,14 @@ export const CitizenPWA: React.FC = () => {
           </a>
         </div>
 
-        {/* Quick Report Hazard Link */}
-        <button
-          onClick={() => setShowReportModal(true)}
-          className="w-full py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono text-xs border border-slate-800 transition-colors"
+        {/* Ground-Truth Photo/Video Report Link */}
+        <Link
+          to="/report"
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-950/50 transition-all active:scale-[0.99]"
         >
-          📷 {language === 'hi' ? 'भूस्खलन या जलभराव की सूचना दें' : 'Report Landslide or Hazard'}
-        </button>
+          <Camera className="w-4 h-4" />
+          <span>{language === 'hi' ? '📸 जमीनी स्थिति रिपोर्ट करें (फोटो / वीडियो)' : '📸 Report Ground-Truth (Photo / Video)'}</span>
+        </Link>
       </div>
 
       {/* Quick Hazard Report Modal for Citizen */}

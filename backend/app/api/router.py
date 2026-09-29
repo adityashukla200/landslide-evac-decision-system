@@ -8,11 +8,13 @@ from backend.app.api.endpoints.alerting import router as alerting_router
 from backend.app.api.endpoints.replay import router as replay_router
 from backend.app.api.endpoints.sensors import router as sensors_router
 from backend.app.api.endpoints.security import router as security_router
+from backend.app.api.endpoints.citizen_reports import router as citizen_reports_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(data_router)
 api_router.include_router(thresholds_router)
 api_router.include_router(evacuation_router)
+api_router.include_router(citizen_reports_router)
 api_router.include_router(alerting_router)
 api_router.include_router(replay_router)
 api_router.include_router(sensors_router)

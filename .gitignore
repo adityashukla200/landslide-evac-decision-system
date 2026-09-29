@@ -60,3 +60,4 @@ Desktop.ini
 
 # Logs & Databases
 *.log
+data/uploads/

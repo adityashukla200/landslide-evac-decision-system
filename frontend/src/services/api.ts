@@ -2,7 +2,7 @@
  * Resilient API client with automatic offline/timeout detection and mock data fallback.
  */
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:8000';
+export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:8000';
 
 export interface ApiResponse<T> {
   data: T;

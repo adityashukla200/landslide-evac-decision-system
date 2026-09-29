@@ -1,6 +1,6 @@
-# SIH 26192 — Disaster EWS Frontend Architecture & User Guide
+# Hyper-Local FlashFlood Prediction — Frontend Architecture & User Guide
 
-**System:** AI-Assisted Hilly-Region Flash Flood & Landslide Early Warning & Evacuation System  
+**System:** Hyper-Local FlashFlood Prediction (SIH 2026, PS 26192)  
 **Pilot Catchment:** Uttarkashi District (Upper Bhagirathi & Yamuna Basins), Uttarakhand  
 **Target Roles:** NDRF Commandants, District Magistrates / Officers, Field Volunteers (Aapda Mitra), Citizens & Char Dham Pilgrims.
 

@@ -42,3 +42,25 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+/* MapLibre dark popup styling */
+.citizen-popup .maplibregl-popup-content {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 8px;
+}
+.citizen-popup .maplibregl-popup-tip {
+  border-top-color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+.citizen-popup .maplibregl-popup-close-button {
+  color: #94a3b8;
+  padding: 4px 8px;
+  font-size: 16px;
+}
+.citizen-popup .maplibregl-popup-close-button:hover {
+  color: #ffffff;
+  background: transparent;
+}
+

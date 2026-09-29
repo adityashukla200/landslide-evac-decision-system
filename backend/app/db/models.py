@@ -52,6 +52,7 @@ class Village(Base):
     shelters = relationship("Shelter", back_populates="village", cascade="all, delete-orphan")
     routes = relationship("Route", back_populates="village", cascade="all, delete-orphan")
     thresholds = relationship("VillageThreshold", back_populates="village", uselist=False, cascade="all, delete-orphan")
+    citizen_reports = relationship("CitizenReport", back_populates="village", cascade="all, delete-orphan")
 
     def to_shapely_geom(self) -> Optional[Any]:
         """Convert geometry representation to a Shapely shape object."""
@@ -254,5 +255,31 @@ class CommunityReport(Base):
 
     # Relationships
     village = relationship("Village")
+
+
+class CitizenReport(Base):
+    """Citizen ground-truth hazard report with geotagged media."""
+
+    __tablename__ = "citizen_reports"
+
+    id = Column(String(64), primary_key=True, index=True)
+    village_id = Column(String(64), ForeignKey("villages.id"), nullable=True, index=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    accuracy_meters = Column(Float, nullable=True)
+    media_type = Column(String(16), nullable=False)  # "photo" or "video"
+    file_path = Column(String(512), nullable=False)
+    thumbnail_path = Column(String(512), nullable=True)
+    caption = Column(Text, nullable=True)
+    reported_flood = Column(Boolean, nullable=False, default=True)
+    reporter_phone = Column(String(32), nullable=True)
+    status = Column(String(32), nullable=False, default="pending")  # pending, verified, rejected, duplicate
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    reviewed_by = Column(String(64), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    audit_log = Column(JSON, nullable=True, default=list)
+
+    # Relationships
+    village = relationship("Village", back_populates="citizen_reports")
 
 
