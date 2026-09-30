@@ -1,7 +1,7 @@
 {
   "name": "Hyper-Local FlashFlood Prediction",
   "short_name": "FlashFlood EWS",
-  "description": "Hyper-Local FlashFlood Prediction & Evacuation Guidance — SIH 2026, PS 26192",
+  "description": "Hyper-Local FlashFlood Prediction & Evacuation Guidance",
   "start_url": "/citizen",
   "display": "standalone",
   "background_color": "#020617",

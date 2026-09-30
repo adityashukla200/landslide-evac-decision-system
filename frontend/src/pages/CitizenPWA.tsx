@@ -124,7 +124,7 @@ export const CitizenPWA: React.FC = () => {
             <h1 className="text-xs font-bold font-mono tracking-wide text-slate-200">
               {language === 'hi' ? 'हाइपर-लोकल फ्लैशबाढ़ पूर्वसूचना' : 'HYPER-LOCAL FLASHFLOOD PREDICTION'}
             </h1>
-            <span className="text-[10px] text-slate-400 font-mono">SIH 2026, PS 26192 • Uttarkashi Pilot</span>
+            <span className="text-[10px] text-slate-400 font-mono">Disaster Early Warning Portal</span>
           </div>
         </div>
 
@@ -139,10 +139,10 @@ export const CitizenPWA: React.FC = () => {
           </button>
           <Link
             to="/"
-            className="px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700 text-[11px]"
+            className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-bold transition-colors"
             title="Return to Officer Mission Control"
           >
-            HQ
+            Officer Login
           </Link>
         </div>
       </div>

@@ -6,7 +6,6 @@ import { StatusIndicator } from './StatusIndicator';
 import {
   ShieldAlert,
   Smartphone,
-  MapPin,
   Clock,
   User,
   Radio,
@@ -65,15 +64,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
               <h1 className="text-sm sm:text-base font-black tracking-wider text-slate-100 uppercase font-mono">
                 HYPER-LOCAL <span className="text-orange-500">FLASHFLOOD PREDICTION</span>
               </h1>
-              <span className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-950 text-red-400 border border-red-800/60 uppercase tracking-widest font-mono">
-                SIH 2026, PS 26192
-              </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="flex items-center gap-1 text-slate-300 font-medium">
-                <MapPin className="w-3 h-3 text-orange-400" /> Uttarkashi District, Uttarakhand
-              </span>
-              <span className="text-slate-600">•</span>
               <span className="flex items-center gap-1 text-slate-400 text-[11px] font-mono">
                 <Clock className="w-3 h-3 text-slate-500" /> {currentTime || 'Loading...'}
               </span>
@@ -123,25 +115,33 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
           </Link>
 
           {/* Role Switcher Pill */}
-          <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-md border border-slate-800 text-xs font-mono">
+          <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800 text-xs font-mono">
             <User className="w-3.5 h-3.5 text-orange-400" />
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
+              onChange={(e) => {
+                const newRole = e.target.value as UserRole;
+                setRole(newRole);
+                if (newRole === 'CITIZEN') {
+                  navigate('/citizen');
+                } else if (window.location.pathname === '/citizen') {
+                  navigate('/');
+                }
+              }}
               className="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer"
-              title="Switch user operational profile"
+              title="Switch user login profile"
             >
               <option value="DISTRICT_OFFICER" className="bg-slate-900 text-white">
-                Officer: {badgeNumber}
-              </option>
-              <option value="NDRF_COMMANDER" className="bg-slate-900 text-white">
-                NDRF: Cmdt. Bhardwaj
-              </option>
-              <option value="FIELD_VOLUNTEER" className="bg-slate-900 text-white">
-                Volunteer: Aapda Mitra
+                Officer Login
               </option>
               <option value="CITIZEN" className="bg-slate-900 text-white">
-                Citizen View
+                Citizen Login
+              </option>
+              <option value="NDRF_COMMANDER" className="bg-slate-900 text-white">
+                NDRF Commander Login
+              </option>
+              <option value="FIELD_VOLUNTEER" className="bg-slate-900 text-white">
+                Volunteer Login
               </option>
             </select>
           </div>
