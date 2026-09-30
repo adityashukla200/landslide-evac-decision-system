@@ -10,6 +10,9 @@ import {
   User,
   Radio,
   Compass,
+  LogOut,
+  Shield,
+  Lock,
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -19,7 +22,17 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
   const { isOnline, alerts, lastUpdated } = useEmergency();
-  const { role, setRole, userName, badgeNumber } = useAuth();
+  const {
+    role,
+    setRole,
+    userName,
+    badgeNumber,
+    isAuthenticated,
+    isOfficer,
+    officer,
+    logout,
+    openLoginModal,
+  } = useAuth();
   const [currentTime, setCurrentTime] = useState<string>('');
   const navigate = useNavigate();
 
@@ -86,7 +99,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
           {/* Quick Dispatch Alert Button (for officers) */}
           {onOpenAlertModal && (
             <button
-              onClick={onOpenAlertModal}
+              onClick={() => {
+                if (!isOfficer) {
+                  openLoginModal('Officer login required to dispatch emergency directives.');
+                  return;
+                }
+                onOpenAlertModal();
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-bold font-mono tracking-wider transition-colors shadow-md shadow-red-950/60 border border-red-400/30 active:scale-95"
             >
               <Radio className="w-3.5 h-3.5 animate-pulse" />
@@ -114,6 +133,37 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
             <span>CITIZEN PWA</span>
           </Link>
 
+          {/* Officer Login / Logged In State */}
+          {isAuthenticated && officer ? (
+            <div className="flex items-center gap-2 bg-slate-900/90 pl-2.5 pr-1.5 py-1 rounded-md border border-emerald-500/40 text-xs font-mono shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <div className="flex flex-col text-left">
+                <span className="text-slate-100 font-bold leading-tight truncate max-w-[110px] sm:max-w-[140px]">
+                  {officer.name}
+                </span>
+                <span className="text-[10px] text-emerald-400 leading-tight">
+                  {officer.role.toUpperCase()} • {officer.district}
+                </span>
+              </div>
+              <button
+                onClick={() => logout()}
+                className="ml-1 p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
+                title="Logout officer session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => openLoginModal()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-orange-600/30 to-amber-600/30 hover:from-orange-600/50 hover:to-amber-600/50 text-orange-300 hover:text-white border border-orange-500/50 text-xs font-mono font-bold transition-all shadow-sm active:scale-95"
+              title="Authenticate as District / NDRF / State Officer"
+            >
+              <Shield className="w-3.5 h-3.5 text-orange-400" />
+              <span>Officer Login</span>
+            </button>
+          )}
+
           {/* Role Switcher Pill */}
           <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-md border border-slate-800 text-xs font-mono">
             <User className="w-3.5 h-3.5 text-orange-400" />
@@ -121,6 +171,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
               value={role}
               onChange={(e) => {
                 const newRole = e.target.value as UserRole;
+                if ((newRole === 'DISTRICT_OFFICER' || newRole === 'NDRF_COMMANDER') && !isAuthenticated) {
+                  openLoginModal('Officer authentication required to access official command features.');
+                  return;
+                }
                 setRole(newRole);
                 if (newRole === 'CITIZEN') {
                   navigate('/citizen');
@@ -129,19 +183,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAlertModal }) => {
                 }
               }}
               className="bg-transparent text-slate-200 text-xs font-mono outline-none cursor-pointer"
-              title="Switch user login profile"
+              title="Switch user role mode"
             >
               <option value="DISTRICT_OFFICER" className="bg-slate-900 text-white">
-                Officer Login
+                Officer View
               </option>
               <option value="CITIZEN" className="bg-slate-900 text-white">
-                Citizen Login
+                Citizen View
               </option>
               <option value="NDRF_COMMANDER" className="bg-slate-900 text-white">
-                NDRF Commander Login
+                NDRF View
               </option>
               <option value="FIELD_VOLUNTEER" className="bg-slate-900 text-white">
-                Volunteer Login
+                Volunteer View
               </option>
             </select>
           </div>

@@ -458,4 +458,26 @@ class VillageResilienceScore(Base):
     village = relationship("Village")
 
 
+# =============================================================================
+# Dimension 7: Officer Identity & RBAC Authentication Model
+# =============================================================================
+
+class Officer(Base):
+    """District Emergency Operation Centre and Disaster Response Officers."""
+
+    __tablename__ = "officers"
+
+    id = Column(String(64), primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    district = Column(String(64), nullable=False, default="Uttarkashi")
+    email = Column(String(128), unique=True, index=True, nullable=False)
+    phone = Column(String(32), unique=True, index=True, nullable=True)
+    role = Column(String(32), nullable=False, default="officer")  # officer, admin
+    designation = Column(String(128), nullable=True)
+    password_hash = Column(String(256), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_login_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+
 

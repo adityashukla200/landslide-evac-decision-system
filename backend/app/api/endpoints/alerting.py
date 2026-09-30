@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
-from backend.app.db.models import Alert, Village, Recipient, AlertDelivery, CommunityReport
+from backend.app.db.models import Alert, Village, Recipient, AlertDelivery, CommunityReport, Officer
+from backend.app.core.security import require_officer_role
 from backend.app.services.alerting.cap import generate_cap_12_xml
 from backend.app.services.alerting.fatigue import check_alert_suppression
 from backend.app.services.alerting.orchestrator import AlertLadderOrchestrator
@@ -69,6 +70,7 @@ class CommunityReportReview(BaseModel):
 @router.post("/alerts/trigger")
 async def trigger_alert(
     request: AlertTriggerRequest,
+    current_officer: Officer = Depends(require_officer_role(["officer", "admin"])),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Trigger an emergency alert with fatigue control, CAP 1.2 XML, and ladder escalation."""

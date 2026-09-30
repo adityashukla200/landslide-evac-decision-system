@@ -4,6 +4,7 @@ import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
 import { ScenarioBar } from './components/common/ScenarioBar';
 import { AlertCreationModal } from './components/alerts/AlertCreationModal';
+import { OfficerLoginModal } from './components/auth/OfficerLoginModal';
 
 // Pages
 import { CommandCenter } from './pages/CommandCenter';
@@ -82,6 +83,9 @@ export const App: React.FC = () => {
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
       />
+
+      {/* Officer Authentication Modal */}
+      <OfficerLoginModal />
     </>
   );
 };

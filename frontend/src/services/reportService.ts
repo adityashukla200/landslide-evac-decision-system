@@ -1,6 +1,7 @@
 import { fetchWithFallback, ApiResponse, BACKEND_URL } from './api';
 import { CommunityReport } from '../types';
 import { INITIAL_REPORTS } from './mockData';
+import { authService } from './authService';
 
 export interface CreateReportPayload {
   villageId?: string;
@@ -233,9 +234,16 @@ export const reportService = {
     notes?: string
   ): Promise<any> {
     try {
+      const token = authService.getAccessToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${BACKEND_URL}/api/v1/reports/${reportId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           status: newStatus,
           reviewed_by: reviewedBy,

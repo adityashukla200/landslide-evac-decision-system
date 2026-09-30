@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useEmergency } from '../context/EmergencyContext';
+import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/common/Modal';
 import { reportService } from '../services/reportService';
-import { FileSpreadsheet, CheckCircle2, XCircle, Plus, Camera, MapPin, Eye } from 'lucide-react';
+import { FileSpreadsheet, CheckCircle2, XCircle, Plus, Camera, MapPin, Eye, Lock } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const { reports, submitHazardReport } = useEmergency();
+  const { isOfficer, officer, openLoginModal } = useAuth();
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
   // Form state
@@ -34,7 +36,16 @@ export const ReportsPage: React.FC = () => {
   };
 
   const handleReview = async (reportId: string, status: 'VERIFIED' | 'REJECTED') => {
-    await reportService.reviewReport(reportId, status, 'DEOC Commander', 'Inspected on field.');
+    if (!isOfficer) {
+      openLoginModal('Officer authentication required to verify or reject citizen reports.');
+      return;
+    }
+    await reportService.reviewReport(
+      reportId,
+      status,
+      officer?.name || 'DEOC Commander',
+      'Inspected on field.'
+    );
   };
 
   return (
@@ -104,12 +115,15 @@ export const ReportsPage: React.FC = () => {
                   <button
                     onClick={() => handleReview(report.id, 'VERIFIED')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 text-[10px] font-bold"
+                    title={isOfficer ? 'Mark report verified' : 'Officer login required to verify'}
                   >
-                    <CheckCircle2 className="w-3 h-3" /> VET GROUND TRUTH
+                    {!isOfficer ? <Lock className="w-3 h-3 text-orange-400" /> : <CheckCircle2 className="w-3 h-3" />}
+                    <span>VET GROUND TRUTH</span>
                   </button>
                   <button
                     onClick={() => handleReview(report.id, 'REJECTED')}
                     className="flex items-center gap-1 px-2 py-1 rounded bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 text-[10px]"
+                    title={isOfficer ? 'Reject report' : 'Officer login required to reject'}
                   >
                     <XCircle className="w-3 h-3" /> REJECT
                   </button>

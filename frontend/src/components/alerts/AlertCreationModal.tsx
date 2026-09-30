@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
+import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
 import { RiskTier } from '../../types';
 import {
@@ -10,6 +11,7 @@ import {
   ShieldAlert,
   Send,
   Languages,
+  Lock,
 } from 'lucide-react';
 
 interface AlertCreationModalProps {
@@ -26,6 +28,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
   defaultTier = 'WARNING',
 }) => {
   const { villages, triggerEmergencyAlert } = useEmergency();
+  const { isOfficer, openLoginModal } = useAuth();
 
   const [selectedVillageId, setSelectedVillageId] = useState<string>(
     defaultVillageId || villages[1]?.id || 'VIL_UTK_07'
@@ -77,6 +80,10 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
   };
 
   const handleDispatch = async () => {
+    if (!isOfficer) {
+      openLoginModal('Officer credentials required to broadcast emergency directives.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await triggerEmergencyAlert(selectedVillage.id, tier, currentMessage);

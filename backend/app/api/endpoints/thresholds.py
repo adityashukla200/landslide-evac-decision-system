@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
-from backend.app.db.models import Village, VillageThreshold
+from backend.app.db.models import Village, VillageThreshold, Officer
+from backend.app.core.security import require_officer_role
 from ml.decision.thresholds import derive_village_thresholds
 
 router = APIRouter(prefix="/thresholds", tags=["thresholds"])
@@ -97,9 +98,12 @@ def get_village_thresholds(
 def update_village_thresholds(
     village_id: str,
     payload: ThresholdUpdateRequest,
+    current_officer: Officer = Depends(require_officer_role(["officer", "admin"])),
     db: Session = Depends(get_db),
 ) -> Any:
     """Allow authorized district disaster officials to adjust operational thresholds with audit tracking."""
+    if payload.modified_by == "district_official":
+        payload.modified_by = current_officer.name
     village = db.query(Village).filter(Village.id == village_id).first()
     if not village:
         raise HTTPException(

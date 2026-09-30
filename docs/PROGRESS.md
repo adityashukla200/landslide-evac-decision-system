@@ -866,3 +866,65 @@ python -m pytest tests/ -v
 
 - **Detailed Technical Architecture Document**:
   - Full system design and API specification recorded in [`docs/new_features.md`](file:///c:/Users/shukl/OneDrive/Desktop/PS192/docs/new_features.md).
+
+---
+
+## Task 7: Officer Authentication, JWT RBAC & UI Action Gating (Completed)
+
+### 1. What Was Implemented
+1. **Backend Authentication & Officer RBAC Model**:
+   - `Officer` SQLAlchemy model (`backend/app/db/models.py`) with `id`, `name`, `district`, `email`, `phone`, `role` (`officer` or `admin`), `password_hash`, `is_active`, `created_at`.
+   - Secure password hashing using **bcrypt** with salt rounds (`backend/app/core/security.py`). Plain-text passwords are never stored or logged.
+   - JWT tokens: 15-minute short-lived access tokens and 7-day refresh tokens signed with HS256.
+   - Endpoints in `backend/app/api/endpoints/auth.py`:
+     - `POST /api/v1/auth/login`: Authenticates via either official email or phone number + password; returns access token + sets `httpOnly` secure refresh cookie.
+     - `POST /api/v1/auth/refresh`: Silently refreshes access token using httpOnly cookie.
+     - `POST /api/v1/auth/logout`: Revokes refresh token cookie and invalidates session.
+     - `GET /api/v1/auth/me`: Retrieves current officer profile and assigned role.
+   - **Brute-Force Rate Limiting**: In-memory tracker enforcing a maximum of 5 failed login attempts per 10 minutes per IP before lockout.
+
+2. **Protected Officer-Only Endpoints**:
+   - `PUT /api/v1/thresholds/{village_id}`: Protected with `require_officer_role(["officer", "admin"])`.
+   - `POST /api/v1/alerts/trigger`: Protected with `require_officer_role(["officer", "admin"])`.
+   - `PUT /api/v1/reports/{report_id}/status`: Protected with `require_officer_role(["officer", "admin"])`.
+   - `POST /api/v1/sensors/trust/reset`: Protected with `require_officer_role(["officer", "admin"])`.
+   - Returns proper HTTP 401 Unauthorized for missing/invalid/expired tokens, and HTTP 403 Forbidden for unauthorized roles.
+   - Public read-only endpoints (risk display, active alerts, health status) remain open without login.
+
+3. **Seeded Pilot Accounts (`docs/DEMO_LOGINS.md`)**:
+   - Seeded 3 demo officer accounts for the Uttarkashi pilot:
+     - `ddmo.uttarkashi@uk.gov.in` / `Uttarkashi@2026` (Admin - Dr. Rajesh Sharma)
+     - `ndrf.uttarkashi@gov.in` / `NDRF#Rescue2026` (Officer - Maj. Vikram Negi)
+     - `bdo.bhatwari@uk.gov.in` / `Bhatwari@2026` (Officer - Pooja Rawat)
+   - Created comprehensive security advisory in `docs/DEMO_LOGINS.md`.
+
+4. **Frontend Integration & Token Security**:
+   - `authService.ts`: Manages JWT access tokens in-memory (never in plain `localStorage`), supports silent refresh via `httpOnly` cookies or `/api/v1/auth/refresh`.
+   - `AuthContext.tsx`: Provides reactive authentication state (`isOfficer`, `isAuthenticated`, `officer`, `login`, `logout`, `openLoginModal`).
+   - `OfficerLoginModal.tsx`: Modal with 1-click Quick Demo profile buttons, manual credential input, password visibility toggle, and descriptive error banners.
+   - Mounted `OfficerLoginModal` globally in `App.tsx`.
+   - `Header.tsx`: Displays logged-in state (officer name, district, role badge, and red Logout button). When unauthenticated, shows prominent "Officer Login" button.
+
+5. **Gated Officer-Only UI Actions**:
+   - **Alert Dispatch**: "DISPATCH ALERT" in header and "ISSUE EVACUATION DIRECTIVE" in `VillageDetailPanel` and `AlertCreationModal` prompt officer login when unauthenticated.
+   - **Citizen Report Verification**: "VET GROUND TRUTH" and "REJECT" buttons in `ReportsPage` and `VillageDetailPanel` show lock cues and prompt officer login when unauthenticated.
+   - **Threshold Calibration**: Added Bayes-optimal operational threshold calibration card in `VillageDetailPanel` allowing officers to calibrate Watch, Warning, and Evacuate trigger probabilities with live backend persistence (`PUT /api/v1/thresholds/{village_id}`).
+
+### 2. Verification and Test Results
+- **Authentication Unit & Integration Tests (`tests/test_auth.py`)**:
+  - `test_login_success_with_email`: PASSED
+  - `test_login_success_with_phone`: PASSED
+  - `test_login_invalid_password`: PASSED
+  - `test_login_nonexistent_user`: PASSED
+  - `test_login_brute_force_rate_limit`: PASSED (locks out after 5 consecutive failures)
+  - `test_refresh_token_endpoint`: PASSED
+  - `test_logout_endpoint`: PASSED
+  - `test_protected_endpoint_without_token_fails`: PASSED (HTTP 401)
+  - `test_protected_endpoint_invalid_token_fails`: PASSED (HTTP 401)
+  - `test_protected_endpoint_expired_token_fails`: PASSED (HTTP 401)
+  - `test_protected_endpoint_with_valid_officer_token`: PASSED (HTTP 200)
+  - `test_get_current_officer_me`: PASSED (HTTP 200)
+  - **Result**: `12 passed in 10.42s`.
+
+- **Frontend Production Build**:
+  - `tsc && vite build`: **0 errors**, production bundle generated cleanly.

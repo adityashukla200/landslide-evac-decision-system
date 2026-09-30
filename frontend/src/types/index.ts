@@ -170,3 +170,24 @@ export interface CommunityReport {
 export type ScenarioType = 'NORMAL' | 'HEAVY_RAIN' | 'LANDSLIDE_WARNING' | 'FLASH_FLOOD' | 'EVACUATION';
 
 export type UserRole = 'DISTRICT_OFFICER' | 'NDRF_COMMANDER' | 'FIELD_VOLUNTEER' | 'CITIZEN';
+
+export interface OfficerProfile {
+  id: string;
+  name: string;
+  district: string;
+  email: string;
+  phone?: string;
+  role: 'officer' | 'admin';
+  designation?: string;
+  is_active?: boolean;
+  created_at?: string;
+  last_login_at?: string;
+}
+
+export interface AuthTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  officer: OfficerProfile;
+}

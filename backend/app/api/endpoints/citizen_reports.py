@@ -27,8 +27,8 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
-from backend.app.db.models import CitizenReport, Village
-from backend.app.core.security import mask_phone_number, get_current_role, UserRole
+from backend.app.db.models import CitizenReport, Village, Officer
+from backend.app.core.security import mask_phone_number, get_current_role, UserRole, require_officer_role
 from backend.app.services.citizen_reports import (
     validate_media_type_and_size,
     extract_exif_gps,
@@ -315,6 +315,7 @@ def stream_report_thumbnail(report_id: str, db: Session = Depends(get_db)):
 def update_report_status(
     report_id: str,
     update_in: ReportStatusUpdate,
+    current_officer: Officer = Depends(require_officer_role(["officer", "admin"])),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Officer verification endpoint: marks report as verified, rejected, or duplicate with audit log."""
@@ -327,9 +328,10 @@ def update_report_status(
 
     old_status = report.status
     now_utc = datetime.now(timezone.utc)
+    reviewer = update_in.reviewed_by if update_in.reviewed_by else current_officer.name
 
     report.status = update_in.status.lower()
-    report.reviewed_by = update_in.reviewed_by
+    report.reviewed_by = reviewer
     report.reviewed_at = now_utc
 
     # Append to audit log

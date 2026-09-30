@@ -4,6 +4,8 @@ import { Village, Route, Shelter } from '../../types';
 import { RiskBadge } from '../common/RiskBadge';
 import { RiskTimeline } from './RiskTimeline';
 import { reportService, CitizenReportItem } from '../../services/reportService';
+import { useAuth } from '../../context/AuthContext';
+import { BACKEND_URL } from '../../services/api';
 import {
   X,
   AlertOctagon,
@@ -21,6 +23,9 @@ import {
   Check,
   Play,
   ExternalLink,
+  Sliders,
+  Lock,
+  Save,
 } from 'lucide-react';
 
 interface VillageDetailPanelProps {
@@ -38,9 +43,20 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
   onClose,
   onTriggerAlert,
 }) => {
+  const { isOfficer, officer, openLoginModal, getValidAccessToken } = useAuth();
   const [citizenReports, setCitizenReports] = useState<CitizenReportItem[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(false);
   const [activeMedia, setActiveMedia] = useState<CitizenReportItem | null>(null);
+
+  // Operational Threshold Calibration state
+  const [isEditingThresholds, setIsEditingThresholds] = useState(false);
+  const [thresholds, setThresholds] = useState({
+    watch_threshold: 0.015,
+    warning_threshold: 0.025,
+    evacuate_threshold: 0.150,
+  });
+  const [savingThresholds, setSavingThresholds] = useState(false);
+  const [thresholdSuccessMsg, setThresholdSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!village) return;
@@ -52,10 +68,53 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
   }, [village?.id]);
 
   const handleUpdateStatus = async (reportId: string, newStatus: 'verified' | 'rejected') => {
-    await reportService.updateCitizenReportStatus(reportId, newStatus, 'DEOC Officer');
+    if (!isOfficer) {
+      openLoginModal('Officer authentication required to verify or reject citizen reports.');
+      return;
+    }
+    await reportService.updateCitizenReportStatus(reportId, newStatus, officer?.name || 'DEOC Officer');
     setCitizenReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
     );
+  };
+
+  const handleSaveThresholds = async () => {
+    if (!isOfficer) {
+      openLoginModal('Officer authentication required to calibrate risk thresholds.');
+      return;
+    }
+    if (!village) return;
+    setSavingThresholds(true);
+    try {
+      const token = await getValidAccessToken();
+      const res = await fetch(`${BACKEND_URL}/api/v1/thresholds/${village.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          watch_threshold: thresholds.watch_threshold,
+          warning_threshold: thresholds.warning_threshold,
+          evacuate_threshold: thresholds.evacuate_threshold,
+          modified_by: officer?.name || 'District Officer',
+          change_reason: 'Recalibrated via Command Center',
+        }),
+      });
+      if (res.ok) {
+        setThresholdSuccessMsg('Thresholds saved successfully.');
+        setTimeout(() => setThresholdSuccessMsg(null), 3000);
+        setIsEditingThresholds(false);
+      } else {
+        const err = await res.json().catch(() => ({ detail: 'Failed to update thresholds' }));
+        alert(err.detail || 'Failed to update thresholds');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Network error updating thresholds');
+    } finally {
+      setSavingThresholds(false);
+    }
   };
 
   if (!village) return null;
@@ -198,6 +257,104 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
 
           {/* Risk Timeline Observed vs Predicted */}
           <RiskTimeline risk={risk} height={150} />
+
+          {/* Operational Risk Threshold Calibration (Officer Gated) */}
+          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-slate-200 font-bold border-b border-slate-800 pb-1">
+              <div className="flex items-center gap-1.5">
+                <Sliders className="w-4 h-4 text-amber-400" />
+                <span>OPERATIONAL THRESHOLDS</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isOfficer) {
+                    openLoginModal('Officer authentication required to calibrate risk thresholds.');
+                    return;
+                  }
+                  setIsEditingThresholds(!isEditingThresholds);
+                }}
+                className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors"
+                title={isOfficer ? 'Adjust threshold probabilities' : 'Officer login required'}
+              >
+                {!isOfficer && <Lock className="w-3 h-3 text-orange-400" />}
+                <span>{isEditingThresholds ? 'Cancel' : 'Calibrate'}</span>
+              </button>
+            </div>
+
+            {thresholdSuccessMsg && (
+              <div className="p-1.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5" />
+                <span>{thresholdSuccessMsg}</span>
+              </div>
+            )}
+
+            {!isEditingThresholds ? (
+              <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                <div className="p-1.5 rounded bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-400">WATCH</div>
+                  <div className="font-bold text-amber-300">{(thresholds.watch_threshold * 100).toFixed(1)}%</div>
+                </div>
+                <div className="p-1.5 rounded bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-400">WARNING</div>
+                  <div className="font-bold text-orange-400">{(thresholds.warning_threshold * 100).toFixed(1)}%</div>
+                </div>
+                <div className="p-1.5 rounded bg-slate-950/60 border border-slate-800">
+                  <div className="text-slate-400">EVACUATE</div>
+                  <div className="font-bold text-red-400">{(thresholds.evacuate_threshold * 100).toFixed(1)}%</div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">Watch P</label>
+                    <input
+                      type="number"
+                      step="0.005"
+                      min="0.001"
+                      max="0.99"
+                      value={thresholds.watch_threshold}
+                      onChange={(e) => setThresholds({ ...thresholds, watch_threshold: parseFloat(e.target.value) || 0.01 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-[11px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">Warning P</label>
+                    <input
+                      type="number"
+                      step="0.005"
+                      min="0.001"
+                      max="0.99"
+                      value={thresholds.warning_threshold}
+                      onChange={(e) => setThresholds({ ...thresholds, warning_threshold: parseFloat(e.target.value) || 0.02 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-[11px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 uppercase">Evacuate P</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max="0.99"
+                      value={thresholds.evacuate_threshold}
+                      onChange={(e) => setThresholds({ ...thresholds, evacuate_threshold: parseFloat(e.target.value) || 0.15 })}
+                      className="w-full bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-[11px]"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveThresholds}
+                  disabled={savingThresholds}
+                  className="w-full py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{savingThresholds ? 'Saving...' : 'Save Decision Thresholds'}</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Evacuation Route & Shelter Summary */}
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
@@ -343,8 +500,9 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
                               ? 'bg-emerald-950/40 text-emerald-600 cursor-not-allowed'
                               : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60'
                           }`}
+                          title={isOfficer ? 'Mark report verified' : 'Officer login required to verify'}
                         >
-                          <Check className="w-3 h-3" />
+                          {!isOfficer ? <Lock className="w-3 h-3 text-orange-400" /> : <Check className="w-3 h-3" />}
                           <span>Verify</span>
                         </button>
 
@@ -357,6 +515,7 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
                               ? 'bg-red-950/40 text-red-600 cursor-not-allowed'
                               : 'bg-red-950 hover:bg-red-900 text-red-300 border border-red-700/60'
                           }`}
+                          title={isOfficer ? 'Reject report' : 'Officer login required to reject'}
                         >
                           <X className="w-3 h-3" />
                           <span>Reject</span>
@@ -418,10 +577,17 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
       {/* Action Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-900/90 sticky bottom-0">
         <button
-          onClick={() => onTriggerAlert(village.id, 'EVACUATE')}
+          onClick={() => {
+            if (!isOfficer) {
+              openLoginModal('Officer authentication required to issue evacuation directives.');
+              return;
+            }
+            onTriggerAlert(village.id, 'EVACUATE');
+          }}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-black tracking-wider transition-colors shadow-lg shadow-red-950 border border-red-400/40 active:scale-98"
+          title={isOfficer ? 'Issue official evacuation directive' : 'Officer login required to issue evacuation directive'}
         >
-          <AlertOctagon className="w-4 h-4" />
+          {!isOfficer ? <Lock className="w-4 h-4 text-white/80" /> : <AlertOctagon className="w-4 h-4" />}
           <span>ISSUE EVACUATION DIRECTIVE</span>
         </button>
       </div>

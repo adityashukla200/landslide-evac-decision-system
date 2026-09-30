@@ -10,6 +10,12 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+let tokenProvider: (() => string | null) | null = null;
+
+export function setTokenProvider(provider: () => string | null) {
+  tokenProvider = provider;
+}
+
 export async function fetchWithFallback<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -21,11 +27,16 @@ export async function fetchWithFallback<T>(
 
   try {
     const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}${endpoint}`;
+    const token = tokenProvider ? tokenProvider() : null;
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...(options.headers || {}),
       },
     });

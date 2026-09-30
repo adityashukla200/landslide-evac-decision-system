@@ -16,8 +16,10 @@ from backend.app.api.endpoints.dynamic_routing import router as dynamic_routing_
 from backend.app.api.endpoints.telecom import router as telecom_router
 from backend.app.api.endpoints.institutional import router as institutional_router
 from backend.app.api.endpoints.copilot import router as copilot_router
+from backend.app.api.endpoints.auth import router as auth_router
 
 api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(auth_router)
 api_router.include_router(data_router)
 api_router.include_router(thresholds_router)
 api_router.include_router(evacuation_router)

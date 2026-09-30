@@ -11,8 +11,11 @@ POST /sensors/trust/reset       — reset trust-layer state for a single sensor
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Query, HTTPException, status
+from fastapi import APIRouter, Query, HTTPException, status, Depends
 from pydantic import BaseModel
+
+from backend.app.db.models import Officer
+from backend.app.core.security import require_officer_role
 
 from backend.app.services.sensors.simulator import SensorSimulator, VILLAGE_REGISTRY
 from backend.app.services.sensors.trust import SensorTrustLayer
@@ -178,7 +181,10 @@ def cross_validate(
 
 
 @router.post("/trust/reset")
-def reset_trust(req: TrustResetRequest) -> Dict[str, str]:
+def reset_trust(
+    req: TrustResetRequest,
+    current_officer: Officer = Depends(require_officer_role(["officer", "admin"])),
+) -> Dict[str, str]:
     """Reset trust-layer history for a specific sensor (after recalibration)."""
     valid_types = {"soil_moisture", "rainfall", "tilt", "stream_level"}
     if req.sensor_type not in valid_types:

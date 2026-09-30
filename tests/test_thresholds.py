@@ -162,7 +162,11 @@ def test_api_put_thresholds_validation_and_audit_logging(client):
         "modified_by": "district_magistrate_uttarkashi",
         "change_reason": "Monsoon readiness review adjustment",
     }
-    put_resp = client.put("/api/v1/thresholds/VIL_UTK_02", json=update_payload)
+    put_resp = client.put(
+        "/api/v1/thresholds/VIL_UTK_02",
+        headers={"X-User-Role": "officer"},
+        json=update_payload,
+    )
     assert put_resp.status_code == 200
     data = put_resp.json()
 
@@ -185,7 +189,11 @@ def test_api_put_thresholds_validation_and_audit_logging(client):
         "evacuate_threshold": 0.1500,
         "modified_by": "test_officer",
     }
-    bad_resp = client.put("/api/v1/thresholds/VIL_UTK_02", json=invalid_hierarchy)
+    bad_resp = client.put(
+        "/api/v1/thresholds/VIL_UTK_02",
+        headers={"X-User-Role": "officer"},
+        json=invalid_hierarchy,
+    )
     assert bad_resp.status_code == 422
     assert "hierarchy" in bad_resp.json()["detail"].lower()
 
@@ -194,5 +202,9 @@ def test_api_put_thresholds_validation_and_audit_logging(client):
         "cost_miss": -50.0,
         "modified_by": "test_officer",
     }
-    cost_resp = client.put("/api/v1/thresholds/VIL_UTK_02", json=invalid_cost)
+    cost_resp = client.put(
+        "/api/v1/thresholds/VIL_UTK_02",
+        headers={"X-User-Role": "officer"},
+        json=invalid_cost,
+    )
     assert cost_resp.status_code == 422

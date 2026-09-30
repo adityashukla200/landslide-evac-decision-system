@@ -288,9 +288,10 @@ def test_officer_status_update_and_audit(client):
     assert sub_resp.status_code == 201
     report_id = sub_resp.json()["report_id"]
 
-    # Officer marks verified
+    # Officer marks verified (requires officer role)
     put_resp = client.put(
         f"/api/v1/reports/{report_id}/status",
+        headers={"X-User-Role": "officer"},
         json={
             "status": "verified",
             "reviewed_by": "Cmdt. R.K. Bhardwaj (NDRF)",
