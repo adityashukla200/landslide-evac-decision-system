@@ -57,8 +57,10 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     routes: true,
     shelters: true,
     rainHeatmap: true,
-    baseLayer: 'dark',
+    baseLayer: isDark ? 'dark' : 'streets',
   });
+
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const [citizenReports, setCitizenReports] = useState<CitizenReportItem[]>([]);
 
@@ -97,65 +99,132 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   };
 
-  // Base map style URLs (Light vs Dark thematic basemaps)
+  // Base map style specification (Zero API Key required - OpenStreetMap, ESRI, OpenTopoMap)
   const getStyleUrl = (base: string, isDarkMode: boolean) => {
-    switch (base) {
-      case 'terrain':
-        return 'https://demotiles.maplibre.org/style.json';
-      case 'satellite':
-        return {
-          version: 8,
-          sources: {
-            'satellite-tiles': {
-              type: 'raster',
-              tiles: [
-                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-              ],
-              tileSize: 256,
-              attribution: '© Esri, Maxar, Earthstar Geographics',
-            },
-          },
-          layers: [
-            {
-              id: 'satellite-layer',
-              type: 'raster',
-              source: 'satellite-tiles',
-              minzoom: 0,
-              maxzoom: 19,
-            },
+    const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
+
+    return {
+      version: 8,
+      sources: {
+        'osm-tiles': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors',
+        },
+        'esri-dark-tiles': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
           ],
-        };
-      case 'dark':
-      default: {
-        const tileUrl = isDarkMode
-          ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-          : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-        return {
-          version: 8,
-          sources: {
-            'osm-tiles': {
-              type: 'raster',
-              tiles: [tileUrl],
-              tileSize: 256,
-              attribution: '© OpenStreetMap contributors, © CARTO | SIH 26192',
-            },
-          },
-          layers: [
-            {
-              id: 'osm-layer',
-              type: 'raster',
-              source: 'osm-tiles',
-              minzoom: 0,
-              maxzoom: 19,
-              paint: {
-                'raster-opacity': isDarkMode ? 0.85 : 0.95,
-                'raster-contrast': 0,
+          tileSize: 256,
+          attribution: '© Esri, HERE, Garmin, OpenStreetMap contributors',
+        },
+        'esri-dark-ref': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+          ],
+          tileSize: 256,
+          attribution: '© Esri',
+        },
+        'opentopo-tiles': {
+          type: 'raster',
+          tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenTopoMap, © OpenStreetMap contributors',
+        },
+        'satellite-tiles': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          ],
+          tileSize: 256,
+          attribution: '© Esri, Maxar, Earthstar Geographics',
+        },
+        ...(cartoKey
+          ? {
+              'carto-tiles': {
+                type: 'raster',
+                tiles: [
+                  isDarkMode
+                    ? `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?api_key=${cartoKey}`
+                    : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?api_key=${cartoKey}`,
+                ],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors, © CARTO',
               },
-            },
-          ],
-        };
-      }
-    }
+            }
+          : {}),
+      },
+      layers: [
+        {
+          id: 'osm-layer',
+          type: 'raster',
+          source: 'osm-tiles',
+          minzoom: 0,
+          maxzoom: 19,
+          layout: {
+            visibility: base === 'streets' || (base === 'dark' && !isDarkMode) ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.95,
+          },
+        },
+        {
+          id: 'esri-dark-layer',
+          type: 'raster',
+          source: 'esri-dark-tiles',
+          minzoom: 0,
+          maxzoom: 16,
+          layout: {
+            visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.95,
+          },
+        },
+        {
+          id: 'esri-dark-ref-layer',
+          type: 'raster',
+          source: 'esri-dark-ref',
+          minzoom: 0,
+          maxzoom: 16,
+          layout: {
+            visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.9,
+          },
+        },
+        {
+          id: 'opentopo-layer',
+          type: 'raster',
+          source: 'opentopo-tiles',
+          minzoom: 0,
+          maxzoom: 17,
+          layout: {
+            visibility: base === 'terrain' ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.95,
+          },
+        },
+        {
+          id: 'satellite-layer',
+          type: 'raster',
+          source: 'satellite-tiles',
+          minzoom: 0,
+          maxzoom: 19,
+          layout: {
+            visibility: base === 'satellite' ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.95,
+          },
+        },
+      ],
+    };
   };
 
   // Initialize Map
@@ -167,7 +236,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         container: mapContainer.current,
         style: getStyleUrl(layers.baseLayer, isDark) as any,
         center: [78.4354, 30.7268], // Uttarkashi Town HQ
-        zoom: 10.2,
+        zoom: 10.8,
         maxZoom: 16,
         minZoom: 7,
       });
@@ -186,20 +255,21 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   }, []);
 
-  // Dynamically update basemap tile source when theme switches (instant, no page reload)
+  // Dynamically update basemap tile visibility when theme or baseLayer switches (instant 0ms, zero-reload)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     const m = map.current;
-    if (layers.baseLayer === 'terrain' || layers.baseLayer === 'satellite') return;
 
-    const source = m.getSource('osm-tiles') as any;
-    const targetTile = isDark
-      ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-      : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    const showOsm = layers.baseLayer === 'streets' || (layers.baseLayer === 'dark' && !isDark);
+    const showDark = layers.baseLayer === 'dark' && isDark;
+    const showTerrain = layers.baseLayer === 'terrain';
+    const showSat = layers.baseLayer === 'satellite';
 
-    if (source && typeof source.setTiles === 'function') {
-      source.setTiles([targetTile]);
-    }
+    if (m.getLayer('osm-layer')) m.setLayoutProperty('osm-layer', 'visibility', showOsm ? 'visible' : 'none');
+    if (m.getLayer('esri-dark-layer')) m.setLayoutProperty('esri-dark-layer', 'visibility', showDark ? 'visible' : 'none');
+    if (m.getLayer('esri-dark-ref-layer')) m.setLayoutProperty('esri-dark-ref-layer', 'visibility', showDark ? 'visible' : 'none');
+    if (m.getLayer('opentopo-layer')) m.setLayoutProperty('opentopo-layer', 'visibility', showTerrain ? 'visible' : 'none');
+    if (m.getLayer('satellite-layer')) m.setLayoutProperty('satellite-layer', 'visibility', showSat ? 'visible' : 'none');
   }, [isDark, mapLoaded, layers.baseLayer]);
 
   // 1. Update Evacuation Routes & Road Network GeoJSON Layer
@@ -223,7 +293,9 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           }
           if (!coords || coords.length < 2) return null;
 
-          const isSelected = selectedVillage ? r.fromVillageId === selectedVillage.id : false;
+          const isVillageSelected = selectedVillage ? r.fromVillageId === selectedVillage.id : false;
+          const isRouteActive = selectedRouteId ? r.id === selectedRouteId : (isVillageSelected && r.isRecommended);
+
           let color = '#10b981'; // Safe evacuation green
           let casingColor = '#064e3b';
           let statusText = 'RECOMMENDED SAFE EVACUATION TRAIL';
@@ -261,7 +333,8 @@ export const RiskMap: React.FC<RiskMapProps> = ({
               lengthKm: r.lengthKm,
               estWalkMinutes: r.estWalkMinutes,
               description: r.description || '',
-              isSelected,
+              isSelected: isVillageSelected,
+              isActive: isRouteActive,
             },
           };
         })
@@ -282,32 +355,63 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         type: 'line',
         source: 'routes-source',
         paint: {
-          'line-color': ['get', 'casingColor'],
+          'line-color': ['case', ['get', 'isActive'], '#38bdf8', ['get', 'casingColor']],
           'line-width': [
             'case',
+            ['get', 'isActive'],
+            12,
             ['get', 'isSelected'],
-            10,
-            ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8],
+            8,
+            ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 6],
           ],
-          'line-opacity': 0.8,
+          'line-opacity': [
+            'case',
+            ['get', 'isActive'],
+            0.95,
+            ['get', 'isSelected'],
+            0.8,
+            0.5,
+          ],
           'line-blur': 1.5,
         },
       });
 
-      // Core Road / Trail Line
+      // Core Road / Trail Line (Solid for Open Trails & Highways)
       m.addLayer({
         id: 'routes-line',
         type: 'line',
         source: 'routes-source',
+        filter: ['!=', ['get', 'isBlocked'], true],
         paint: {
           'line-color': ['get', 'color'],
           'line-width': [
             'case',
+            ['get', 'isActive'],
+            6,
             ['get', 'isSelected'],
-            5,
-            ['interpolate', ['linear'], ['zoom'], 8, 2.5, 14, 4.5],
+            4.5,
+            ['interpolate', ['linear'], ['zoom'], 8, 2, 14, 3.5],
           ],
-          'line-dasharray': ['case', ['get', 'isBlocked'], ['literal', [2, 2]], ['literal', [1]]],
+        },
+      });
+
+      // Blocked / Severed Routes Line (Dashed)
+      m.addLayer({
+        id: 'routes-line-blocked',
+        type: 'line',
+        source: 'routes-source',
+        filter: ['==', ['get', 'isBlocked'], true],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': [
+            'case',
+            ['get', 'isActive'],
+            5.5,
+            ['get', 'isSelected'],
+            4,
+            2.5,
+          ],
+          'line-dasharray': [2, 2],
         },
       });
 
@@ -330,13 +434,20 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         },
       });
 
-      // Route Click Popup
-      m.on('click', 'routes-line', (e) => {
+      const handleRouteClick = (e: any) => {
         if (!e.features || !e.features[0]) return;
         const feat = e.features[0];
         const props = feat.properties as any;
         const coords = (feat.geometry as GeoJSON.LineString).coordinates;
         const midPoint = coords[Math.floor(coords.length / 2)] as [number, number];
+
+        if (props.id) setSelectedRouteId(props.id);
+
+        const routeObj = routes.find((r) => r.id === props.id);
+        if (routeObj) {
+          const v = villages.find((item) => item.id === routeObj.fromVillageId);
+          if (v && v.id !== selectedVillage?.id) onSelectVillage(v);
+        }
 
         const isBlocked = props.isBlocked === true || props.isBlocked === 'true';
         const badgeColor = isBlocked ? '#dc2626' : '#059669';
@@ -367,17 +478,25 @@ export const RiskMap: React.FC<RiskMapProps> = ({
             </div>
           `)
           .addTo(m);
-      });
+      };
 
-      // Hover Pointer
+      m.on('click', 'routes-line', handleRouteClick);
+      m.on('click', 'routes-line-blocked', handleRouteClick);
+
       m.on('mouseenter', 'routes-line', () => {
         m.getCanvas().style.cursor = 'pointer';
       });
       m.on('mouseleave', 'routes-line', () => {
         m.getCanvas().style.cursor = '';
       });
+      m.on('mouseenter', 'routes-line-blocked', () => {
+        m.getCanvas().style.cursor = 'pointer';
+      });
+      m.on('mouseleave', 'routes-line-blocked', () => {
+        m.getCanvas().style.cursor = '';
+      });
     }
-  }, [routes, villages, shelters, selectedVillage, mapLoaded]);
+  }, [routes, villages, shelters, selectedVillage, selectedRouteId, mapLoaded]);
 
   // 2. Update High-Ground Relief Shelters GeoJSON Layer
   useEffect(() => {
@@ -831,7 +950,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
 
     // Routes
     const routeVis = layers.routes ? 'visible' : 'none';
-    ['routes-casing', 'routes-line', 'routes-label'].forEach((layerId) => {
+    ['routes-casing', 'routes-line', 'routes-line-blocked', 'routes-label'].forEach((layerId) => {
       if (m.getLayer(layerId)) m.setLayoutProperty(layerId, 'visibility', routeVis);
     });
 
@@ -854,16 +973,49 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     });
   }, [layers, mapLoaded]);
 
-  // Fly to selected village
+  // Synchronize selectedRouteId with village change
   useEffect(() => {
-    if (!map.current || !selectedVillage) return;
-    map.current.flyTo({
-      center: [selectedVillage.lon, selectedVillage.lat],
-      zoom: 12.2,
-      essential: true,
-      duration: 1200,
-    });
-  }, [selectedVillage]);
+    if (selectedVillage) {
+      const vRoutes = routes.filter((r) => r.fromVillageId === selectedVillage.id);
+      const rec = vRoutes.find((r) => r.isRecommended) || vRoutes[0];
+      setSelectedRouteId(rec?.id || null);
+    } else {
+      setSelectedRouteId(null);
+    }
+  }, [selectedVillage, routes]);
+
+  // Fly to selected village or fit bounds to village + evacuation routes
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !selectedVillage) return;
+    const m = map.current;
+
+    const vRoutes = routes.filter((r) => r.fromVillageId === selectedVillage.id);
+    const targetRoute = (selectedRouteId && vRoutes.find((r) => r.id === selectedRouteId)) ||
+                        vRoutes.find((r) => r.isRecommended) ||
+                        vRoutes[0];
+    const shelter = shelters.find(
+      (s) => s.id === targetRoute?.toShelterId || s.villageId === selectedVillage.id
+    );
+
+    if (targetRoute && targetRoute.coordinates && targetRoute.coordinates.length > 1) {
+      const bounds = new maplibregl.LngLatBounds();
+      bounds.extend([selectedVillage.lon, selectedVillage.lat]);
+      if (shelter) bounds.extend([shelter.lon, shelter.lat]);
+      targetRoute.coordinates.forEach((pt) => bounds.extend(pt));
+      m.fitBounds(bounds, {
+        padding: { top: 90, bottom: 90, left: 140, right: 400 },
+        maxZoom: 14.2,
+        duration: 1200,
+      });
+    } else {
+      m.flyTo({
+        center: [selectedVillage.lon, selectedVillage.lat],
+        zoom: 12.5,
+        essential: true,
+        duration: 1200,
+      });
+    }
+  }, [selectedVillage, selectedRouteId, mapLoaded]);
 
   // Selected village routes & shelter calculation
   const villageRoutes = selectedVillage
@@ -871,24 +1023,27 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     : [];
   const recommendedRoute = villageRoutes.find((r) => r.isRecommended) || villageRoutes[0];
   const blockedRoute = villageRoutes.find((r) => r.isBlocked);
+  const activeRoute = villageRoutes.find((r) => r.id === selectedRouteId) || recommendedRoute;
   const assignedShelter = shelters.find(
-    (s) => s.id === recommendedRoute?.toShelterId || s.villageId === selectedVillage?.id
+    (s) => s.id === activeRoute?.toShelterId || s.villageId === selectedVillage?.id
   ) || shelters[0];
 
   // Action: Focus evacuation path on map
-  const handleFocusEvacuationPath = () => {
+  const handleFocusEvacuationPath = (routeObj?: Route) => {
     if (!map.current || !selectedVillage) return;
-    if (assignedShelter) {
+    const r = routeObj || activeRoute || recommendedRoute;
+    const s = shelters.find((item) => item.id === r?.toShelterId) || assignedShelter;
+    if (s) {
       const bounds = new maplibregl.LngLatBounds();
       bounds.extend([selectedVillage.lon, selectedVillage.lat]);
-      bounds.extend([assignedShelter.lon, assignedShelter.lat]);
-      if (recommendedRoute?.coordinates) {
-        recommendedRoute.coordinates.forEach((pt) => bounds.extend(pt));
+      bounds.extend([s.lon, s.lat]);
+      if (r?.coordinates) {
+        r.coordinates.forEach((pt) => bounds.extend(pt));
       }
       map.current.fitBounds(bounds, {
-        padding: { top: 80, bottom: 80, left: 100, right: 380 },
+        padding: { top: 80, bottom: 80, left: 120, right: 400 },
         maxZoom: 14.5,
-        duration: 1500,
+        duration: 1300,
       });
     }
   };
@@ -903,11 +1058,11 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* Floating Citizen Evacuation Guidance Card (Top Left) */}
-      <div className="absolute top-3 left-3 z-20 max-w-xs sm:max-w-sm bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-2xl font-mono text-xs select-none">
+      <div className="absolute top-3 left-3 z-20 w-80 sm:w-96 max-w-[calc(100vw-24px)] bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-2xl font-mono text-xs select-none">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
           <div className="flex items-center gap-1.5 text-slate-200 font-bold">
             <Footprints className="w-4 h-4 text-emerald-400" />
-            <span className="text-[11px] tracking-wider uppercase">Citizen Evacuation Route</span>
+            <span className="text-[11px] tracking-wider uppercase">Citizen Evacuation Corridors</span>
           </div>
           <button
             onClick={() => setIsEvacGuideMinimized(!isEvacGuideMinimized)}
@@ -941,56 +1096,116 @@ export const RiskMap: React.FC<RiskMapProps> = ({
                   </div>
                 </div>
 
-                {/* Recommended Path Details */}
-                {recommendedRoute && (
-                  <div className="bg-emerald-950/40 border border-emerald-800/50 rounded-lg p-2 mb-2">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-emerald-300 font-bold flex items-center gap-1 truncate">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                        {recommendedRoute.name}
-                      </span>
+                {/* Interactive Route Selector: Primary vs Alternate */}
+                {villageRoutes.length > 1 && (
+                  <div className="mb-2">
+                    <div className="text-[9px] text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>Available Paths ({villageRoutes.length})</span>
+                      <span className="text-slate-500">Click to compare</span>
                     </div>
-                    <div className="flex items-center gap-3 text-[10px] text-emerald-400 font-semibold mb-1">
-                      <span>📏 {recommendedRoute.lengthKm} km</span>
-                      <span>⏱️ ~{recommendedRoute.estWalkMinutes} min walk</span>
-                      <span>🛡️ Safe Ridge Path</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {villageRoutes.map((r, idx) => {
+                        const isSelected = activeRoute?.id === r.id;
+                        const isRec = r.isRecommended;
+                        const isBlk = r.isBlocked;
+                        return (
+                          <button
+                            key={r.id}
+                            onClick={() => {
+                              setSelectedRouteId(r.id);
+                              handleFocusEvacuationPath(r);
+                            }}
+                            className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all text-left ${
+                              isSelected
+                                ? isBlk
+                                  ? 'bg-red-950/90 border-red-500 text-red-200 ring-1 ring-red-500/50 shadow'
+                                  : 'bg-emerald-950/90 border-emerald-500 text-emerald-200 ring-1 ring-emerald-500/50 shadow'
+                                : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850'
+                            }`}
+                          >
+                            <div className="truncate mr-1">
+                              <div className="truncate font-semibold">{r.name.split('(')[0] || `Route ${idx + 1}`}</div>
+                              <div className="text-[8px] opacity-75 font-normal">{r.lengthKm} km • ~{r.estWalkMinutes}m</div>
+                            </div>
+                            <span className={`text-[8px] px-1 py-0.5 rounded uppercase font-black shrink-0 ${
+                              isBlk
+                                ? 'bg-red-500 text-white'
+                                : isRec
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-slate-700 text-slate-300'
+                            }`}>
+                              {isBlk ? 'BLOCKED' : isRec ? 'SAFE' : 'ALT'}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <p className="text-[9px] text-slate-400 leading-tight">
-                      {recommendedRoute.description ||
-                        'Elevated hillside trail safely outside active flood inundation contours.'}
-                    </p>
                   </div>
                 )}
 
-                {/* Severed / Blocked Route Warning */}
-                {blockedRoute && (
-                  <div className="p-2 rounded-lg bg-red-950/60 border border-red-800/60 mb-2 flex items-start gap-1.5 text-[10px] text-red-300">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-red-200">
-                        VALLEY ROUTE BLOCKED: {blockedRoute.name}
+                {/* Active Selected Path Details */}
+                {activeRoute && (
+                  <div className={`border rounded-lg p-2.5 mb-2 ${
+                    activeRoute.isBlocked
+                      ? 'bg-red-950/40 border-red-800/60'
+                      : 'bg-emerald-950/40 border-emerald-800/50'
+                  }`}>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className={`font-bold flex items-center gap-1 truncate ${
+                        activeRoute.isBlocked ? 'text-red-300' : 'text-emerald-300'
+                      }`}>
+                        {activeRoute.isBlocked ? (
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        )}
+                        {activeRoute.name}
                       </span>
-                      <div className="text-[9px] text-red-400 leading-tight mt-0.5">
-                        {blockedRoute.description || 'Submerged under flood backwaters. Take high ridge trail!'}
-                      </div>
                     </div>
+
+                    <div className={`flex items-center gap-3 text-[10px] font-semibold mb-1.5 ${
+                      activeRoute.isBlocked ? 'text-red-400' : 'text-emerald-400'
+                    }`}>
+                      <span>📏 {activeRoute.lengthKm} km</span>
+                      <span>⏱️ ~{activeRoute.estWalkMinutes} min walk</span>
+                      <span>{activeRoute.isBlocked ? '🚨 Severe Cut Risk' : '🛡️ Safe Ridge Path'}</span>
+                    </div>
+
+                    <p className="text-[9.5px] text-slate-300 leading-snug mb-1">
+                      {activeRoute.description || (activeRoute.isBlocked
+                        ? 'High hazard corridor submerged or vulnerable to mudflow.'
+                        : 'Elevated hillside trail safely outside active flood inundation contours.')}
+                    </p>
+
+                    {activeRoute.isBlocked && recommendedRoute && recommendedRoute.id !== activeRoute.id && (
+                      <button
+                        onClick={() => {
+                          setSelectedRouteId(recommendedRoute.id);
+                          handleFocusEvacuationPath(recommendedRoute);
+                        }}
+                        className="mt-1.5 w-full flex items-center justify-center gap-1 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[10px] transition-colors"
+                      >
+                        <Shield className="w-3 h-3" />
+                        <span>Switch to Safe Alternative: {recommendedRoute.name.split('(')[0]}</span>
+                      </button>
+                    )}
                   </div>
                 )}
 
                 {/* Focus Button */}
                 <button
-                  onClick={handleFocusEvacuationPath}
+                  onClick={() => handleFocusEvacuationPath()}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all text-[11px] shadow-lg active:scale-98"
                 >
                   <Navigation className="w-3.5 h-3.5" />
-                  <span>Focus Evacuation Path</span>
+                  <span>Focus Evacuation Corridor</span>
                 </button>
               </div>
             ) : (
               <div className="text-[10px] text-slate-400 leading-relaxed py-1">
                 <p className="mb-2">
                   Select any village on the map to inspect its designated citizen evacuation corridor,
-                  active road blockages, and high-ground relief shelters.
+                  alternate escape paths, active road blockages, and high-ground relief shelters.
                 </p>
                 <div className="text-[9px] text-slate-500 flex items-center gap-2">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Safe Trail
@@ -1003,7 +1218,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         )}
       </div>
 
-      {/* Floating Map Navigation Controls (Top Right) */}
+      {/* Floating Map Navigation Controls (Top Right) */}{/* Floating Map Navigation Controls (Top Right) */}
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5">
         <button
           onClick={() => map.current?.zoomIn()}

@@ -8,13 +8,13 @@ export interface ActiveLayers {
   shelters: boolean;
   rainHeatmap: boolean;
   citizenReports: boolean;
-  baseLayer: 'dark' | 'terrain' | 'satellite';
+  baseLayer: 'streets' | 'terrain' | 'satellite' | 'dark';
 }
 
 interface LayerControlProps {
   layers: ActiveLayers;
   onToggleLayer: (key: keyof ActiveLayers) => void;
-  onSetBaseLayer: (base: 'dark' | 'terrain' | 'satellite') => void;
+  onSetBaseLayer: (base: 'streets' | 'terrain' | 'satellite' | 'dark') => void;
 }
 
 export const LayerControl: React.FC<LayerControlProps> = ({
@@ -56,14 +56,14 @@ export const LayerControl: React.FC<LayerControlProps> = ({
       {/* Base Layer Switcher */}
       <div className="mb-3">
         <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
-          Base Style
+          Base Style (Zero API Key)
         </label>
-        <div className="grid grid-cols-3 gap-1">
-          {(['dark', 'terrain', 'satellite'] as const).map((mode) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+          {(['streets', 'terrain', 'satellite', 'dark'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => onSetBaseLayer(mode)}
-              className={`px-2 py-1 rounded text-[11px] capitalize border transition-all ${
+              className={`px-2 py-1 rounded text-[10px] capitalize border transition-all ${
                 layers.baseLayer === mode
                   ? 'bg-orange-600 border-orange-400 text-white font-bold'
                   : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
