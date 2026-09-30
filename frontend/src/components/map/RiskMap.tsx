@@ -20,6 +20,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { getCitizenReports, CitizenReportItem } from '../../services/reportService';
+import { useTheme } from '../../context/ThemeContext';
 
 interface RiskMapProps {
   villages: Village[];
@@ -40,8 +41,10 @@ export const RiskMap: React.FC<RiskMapProps> = ({
   onSelectVillage,
   className = '',
 }) => {
+  const { isDark } = useTheme();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const hoverPopup = useRef<maplibregl.Popup | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [is3DMode, setIs3DMode] = useState(false);
@@ -94,22 +97,47 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   };
 
-  // Base map style URLs
-  const getStyleUrl = (base: string) => {
+  // Base map style URLs (Light vs Dark thematic basemaps)
+  const getStyleUrl = (base: string, isDarkMode: boolean) => {
     switch (base) {
       case 'terrain':
         return 'https://demotiles.maplibre.org/style.json';
       case 'satellite':
+        return {
+          version: 8,
+          sources: {
+            'satellite-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              ],
+              tileSize: 256,
+              attribution: '© Esri, Maxar, Earthstar Geographics',
+            },
+          },
+          layers: [
+            {
+              id: 'satellite-layer',
+              type: 'raster',
+              source: 'satellite-tiles',
+              minzoom: 0,
+              maxzoom: 19,
+            },
+          ],
+        };
       case 'dark':
-      default:
+      default: {
+        const tileUrl = isDarkMode
+          ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+          : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
         return {
           version: 8,
           sources: {
             'osm-tiles': {
               type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tiles: [tileUrl],
               tileSize: 256,
-              attribution: '© OpenStreetMap contributors | SIH 26192',
+              attribution: '© OpenStreetMap contributors, © CARTO | SIH 26192',
             },
           },
           layers: [
@@ -120,12 +148,13 @@ export const RiskMap: React.FC<RiskMapProps> = ({
               minzoom: 0,
               maxzoom: 19,
               paint: {
-                'raster-opacity': base === 'dark' ? 0.35 : 0.85,
-                'raster-contrast': base === 'dark' ? 0.2 : 0,
+                'raster-opacity': isDarkMode ? 0.85 : 0.95,
+                'raster-contrast': 0,
               },
             },
           ],
         };
+      }
     }
   };
 
@@ -136,7 +165,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     try {
       const mapInstance = new maplibregl.Map({
         container: mapContainer.current,
-        style: getStyleUrl(layers.baseLayer) as any,
+        style: getStyleUrl(layers.baseLayer, isDark) as any,
         center: [78.4354, 30.7268], // Uttarkashi Town HQ
         zoom: 10.2,
         maxZoom: 16,
@@ -156,6 +185,22 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       console.warn('MapLibre GL initialized in fallback mode', e);
     }
   }, []);
+
+  // Dynamically update basemap tile source when theme switches (instant, no page reload)
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const m = map.current;
+    if (layers.baseLayer === 'terrain' || layers.baseLayer === 'satellite') return;
+
+    const source = m.getSource('osm-tiles') as any;
+    const targetTile = isDark
+      ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+
+    if (source && typeof source.setTiles === 'function') {
+      source.setTiles([targetTile]);
+    }
+  }, [isDark, mapLoaded, layers.baseLayer]);
 
   // 1. Update Evacuation Routes & Road Network GeoJSON Layer
   useEffect(() => {
@@ -516,6 +561,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           prob: (v.risk.probability * 100).toFixed(0),
           lead: v.risk.leadTimeMinutes,
           pop: v.population,
+          selected: selectedVillage ? v.id === selectedVillage.id : false,
         },
       })),
     };
@@ -526,6 +572,34 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       m.addSource('villages-source', {
         type: 'geojson',
         data: villageGeoJson,
+      });
+
+      // Outer Highlight Glow for Selected Village
+      m.addLayer({
+        id: 'villages-selected-glow',
+        type: 'circle',
+        source: 'villages-source',
+        filter: ['==', ['get', 'selected'], true],
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 22, 14, 44],
+          'circle-color': '#f97316',
+          'circle-opacity': 0.4,
+          'circle-blur': 0.5,
+        },
+      });
+
+      // Selected Village Prominent Ring
+      m.addLayer({
+        id: 'villages-selected-ring',
+        type: 'circle',
+        source: 'villages-source',
+        filter: ['==', ['get', 'selected'], true],
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 12, 14, 22],
+          'circle-color': 'transparent',
+          'circle-stroke-width': 3.5,
+          'circle-stroke-color': '#ffffff',
+        },
       });
 
       // Outer Pulsing Glow Circle for High Risk
@@ -582,15 +656,62 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         }
       });
 
-      // Hover Pointer
-      m.on('mouseenter', 'villages-circle', () => {
+      // Hover Tooltip & Pointer
+      m.on('mouseenter', 'villages-circle', (e) => {
         m.getCanvas().style.cursor = 'pointer';
+        if (!e.features || !e.features[0]) return;
+        const feat = e.features[0];
+        const props = feat.properties as any;
+        const coords = (feat.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+
+        if (!hoverPopup.current) {
+          hoverPopup.current = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 14,
+            className: 'village-hover-popup',
+          });
+        }
+
+        const tierColors: Record<string, { bg: string; text: string; border: string }> = {
+          EVACUATE: { bg: '#fee2e2', text: '#991b1b', border: '#f87171' },
+          WARNING: { bg: '#ffedd5', text: '#9a3412', border: '#fb923c' },
+          WATCH: { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
+          NONE: { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+        };
+        const tc = tierColors[props.tier] || tierColors.NONE;
+
+        hoverPopup.current
+          .setLngLat(coords)
+          .setHTML(`
+            <div style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0f172a;color:#f8fafc;padding:8px 10px;border-radius:8px;border:1px solid #334155;box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);min-width:145px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                <strong style="font-size:12px;color:#f8fafc;">${props.name}</strong>
+                <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:${tc.bg};color:${tc.text};border:1px solid ${tc.border};">
+                  ${props.tier}
+                </span>
+              </div>
+              <div style="font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;">
+                <span>Population:</span>
+                <b style="color:#cbd5e1;">${Number(props.pop).toLocaleString()}</b>
+              </div>
+              <div style="font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;margin-top:2px;">
+                <span>Risk Probability:</span>
+                <b style="color:${props.color};">${props.prob}%</b>
+              </div>
+            </div>
+          `)
+          .addTo(m);
       });
+
       m.on('mouseleave', 'villages-circle', () => {
         m.getCanvas().style.cursor = '';
+        if (hoverPopup.current) {
+          hoverPopup.current.remove();
+        }
       });
     }
-  }, [villages, mapLoaded]);
+  }, [villages, selectedVillage, mapLoaded]);
 
   // 4. Update Citizen Reports GeoJSON layer
   useEffect(() => {

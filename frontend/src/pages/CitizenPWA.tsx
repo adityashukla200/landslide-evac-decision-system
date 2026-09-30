@@ -16,10 +16,16 @@ import {
   Share2,
   Languages,
   Camera,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 
 export const CitizenPWA: React.FC = () => {
   const { villages, isOnline, lastUpdated, submitHazardReport } = useEmergency();
+  const { isDark, toggleTheme } = useTheme();
+  const { success, error } = useToast();
   const [selectedVillageId, setSelectedVillageId] = useState<string>('VIL_UTK_08'); // Default Maneri
   const [language, setLanguage] = useState<'hi' | 'en'>('hi');
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
@@ -100,16 +106,26 @@ export const CitizenPWA: React.FC = () => {
 
   const handleQuickReport = async () => {
     if (!reportText.trim()) return;
-    await submitHazardReport({
-      villageId: currentVillage.id,
-      hazardType: 'Flash Flood',
-      text: reportText,
-      lat: currentVillage.lat,
-      lon: currentVillage.lon,
-      reporterName: 'Mobile Citizen',
-    });
-    setReportText('');
-    setShowReportModal(false);
+    try {
+      await submitHazardReport({
+        villageId: currentVillage.id,
+        hazardType: 'Flash Flood',
+        text: reportText,
+        lat: currentVillage.lat,
+        lon: currentVillage.lon,
+        reporterName: 'Mobile Citizen',
+      });
+      success(
+        language === 'hi'
+          ? 'आपकी रिपोर्ट प्राप्त हुई। राहत दल को सतर्क कर दिया गया है।'
+          : 'Hazard report transmitted. Emergency teams alerted.',
+        'Report Sent'
+      );
+      setReportText('');
+      setShowReportModal(false);
+    } catch (e: any) {
+      error(e.message || 'Failed to submit report', 'Transmission Error');
+    }
   };
 
   return (
@@ -128,8 +144,16 @@ export const CitizenPWA: React.FC = () => {
           </div>
         </div>
 
-        {/* Language & Officer Dashboard Link */}
+        {/* Theme, Language & Officer Dashboard Link */}
         <div className="flex items-center gap-1.5 font-mono text-xs">
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            aria-label="Toggle Light and Dark Theme"
+          >
+            {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-400" />}
+          </button>
           <button
             onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
             className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 text-orange-400 border border-slate-700 font-bold"
@@ -230,14 +254,22 @@ export const CitizenPWA: React.FC = () => {
           <div className="space-y-2">
             {!hasCheckedInSafe ? (
               <button
-                onClick={() => setHasCheckedInSafe(true)}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-red-600 text-white font-black text-sm tracking-wider uppercase shadow-xl shadow-red-950 flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-400/40"
+                onClick={() => {
+                  setHasCheckedInSafe(true);
+                  success(
+                    language === 'hi'
+                      ? 'आपकी सुरक्षित उपस्थिति दर्ज हो गई है। राहत दल को सूचित कर दिया गया है।'
+                      : 'Checked in safe. Incident commander notified.',
+                    'Status Updated'
+                  );
+                }}
+                className="w-full py-4 min-h-[48px] px-6 rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-red-600 text-white font-black text-sm tracking-wider uppercase shadow-xl shadow-red-950 flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-400/40 focus-visible:ring-2 focus-visible:ring-orange-500"
               >
                 <Footprints className="w-5 h-5 animate-pulse" />
                 <span>{statusConfig.actionText}</span>
               </button>
             ) : (
-              <div className="p-3 rounded-xl bg-emerald-950 border border-emerald-500 text-emerald-300 font-mono text-xs text-center flex items-center justify-center gap-2 font-bold">
+              <div className="p-3.5 rounded-xl bg-emerald-950 border border-emerald-500 text-emerald-300 font-mono text-xs text-center flex items-center justify-center gap-2 font-bold shadow-md">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>{language === 'hi' ? 'आपकी सुरक्षित उपस्थिति दर्ज हो गई है' : 'Checked In Safe at Shelter'}</span>
               </div>

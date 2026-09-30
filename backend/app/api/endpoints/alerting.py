@@ -247,11 +247,12 @@ def get_alert_reach(
 @router.post("/drills/trigger")
 async def trigger_drill(
     request: AlertTriggerRequest,
+    current_officer: Officer = Depends(require_officer_role(["officer", "admin"])),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Trigger an emergency exercise evacuation drill with CAP status='Test'."""
     request.is_drill = True
-    return await trigger_alert(request, db)
+    return await trigger_alert(request=request, current_officer=current_officer, db=db)
 
 
 @router.get("/drills/{drill_id}/report")

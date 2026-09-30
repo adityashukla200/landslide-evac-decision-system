@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useEmergency } from '../context/EmergencyContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/common/Modal';
+import { EmptyState } from '../components/common/EmptyState';
 import { reportService } from '../services/reportService';
-import { FileSpreadsheet, CheckCircle2, XCircle, Plus, Camera, MapPin, Eye, Lock } from 'lucide-react';
+import { FileSpreadsheet, CheckCircle2, XCircle, Plus, Camera, MapPin, Eye, Lock, Inbox } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const { reports, submitHazardReport } = useEmergency();
   const { isOfficer, officer, openLoginModal } = useAuth();
+  const { success, error } = useToast();
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
   // Form state
@@ -22,17 +25,22 @@ export const ReportsPage: React.FC = () => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    await submitHazardReport({
-      hazardType,
-      text,
-      reporterName: reporterName || 'Citizen Reporter',
-      reporterPhone: reporterPhone || '+919876500000',
-      lat: parseFloat(lat) || 30.765,
-      lon: parseFloat(lon) || 78.532,
-    });
+    try {
+      await submitHazardReport({
+        hazardType,
+        text,
+        reporterName: reporterName || 'Citizen Reporter',
+        reporterPhone: reporterPhone || '+919876500000',
+        lat: parseFloat(lat) || 30.765,
+        lon: parseFloat(lon) || 78.532,
+      });
 
-    setText('');
-    setIsSubmitModalOpen(false);
+      success('Ground-truth hazard report submitted successfully.', 'Report Submitted');
+      setText('');
+      setIsSubmitModalOpen(false);
+    } catch (err: any) {
+      error(err.message || 'Failed to submit report', 'Submission Error');
+    }
   };
 
   const handleReview = async (reportId: string, status: 'VERIFIED' | 'REJECTED') => {
@@ -46,43 +54,58 @@ export const ReportsPage: React.FC = () => {
       officer?.name || 'DEOC Commander',
       'Inspected on field.'
     );
+    success(
+      status === 'VERIFIED'
+        ? 'Field observation verified as trustworthy ground truth.'
+        : 'Observation marked as rejected.',
+      'Report Vetted'
+    );
   };
 
   return (
-    <div className="flex-1 p-4 md:p-6 bg-slate-950 overflow-y-auto font-mono text-xs select-none space-y-4">
+    <div className="flex-1 p-4 md:p-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto font-mono text-xs select-none space-y-4 transition-colors">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h2 className="text-base font-bold text-slate-100 font-mono">CROWD-SOURCED COMMUNITY HAZARD REPORTS</h2>
-          <p className="text-xs text-slate-400">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 font-mono">CROWD-SOURCED COMMUNITY HAZARD REPORTS</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Field observations submitted by citizens and volunteers, vetted by NDRF as ground-truth candidates
           </p>
         </div>
 
         <button
           onClick={() => setIsSubmitModalOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs tracking-wider transition-colors shadow-md shadow-orange-950"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs tracking-wider transition-colors shadow-md shadow-orange-950/20 dark:shadow-orange-950"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>SUBMIT HAZARD REPORT</span>
         </button>
       </div>
 
-      {/* Reports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {reports.map((report) => (
-          <div
-            key={report.id}
-            className="p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-md space-y-3"
-          >
-            <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
-              <div>
-                <span className="text-[10px] text-orange-400 font-bold uppercase">{report.hazardType}</span>
-                <h3 className="font-bold text-slate-100 text-sm">{report.villageName || 'Field Observation'}</h3>
-                <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3" /> {report.lat.toFixed(4)}, {report.lon.toFixed(4)} • {report.createdAt}
+      {/* Reports Grid or Empty State */}
+      {reports.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title="No Field Reports Submitted Yet"
+          description="There are currently no crowd-sourced hazard observations for Uttarkashi district. Citizens and field volunteers can submit geotagged photo/video observations anytime."
+          actionText="Submit Field Report"
+          onAction={() => setIsSubmitModalOpen(true)}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {reports.map((report) => (
+            <div
+              key={report.id}
+              className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+                <div>
+                  <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase">{report.hazardType}</span>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{report.villageName || 'Field Observation'}</h3>
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3" /> {report.lat.toFixed(4)}, {report.lon.toFixed(4)} • {report.createdAt}
+                  </div>
                 </div>
-              </div>
 
               <span
                 className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
@@ -133,6 +156,7 @@ export const ReportsPage: React.FC = () => {
           </div>
         ))}
       </div>
+    )}
 
       {/* Submission Modal */}
       <Modal

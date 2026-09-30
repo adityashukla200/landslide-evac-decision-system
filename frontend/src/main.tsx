@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import { EmergencyProvider } from './context/EmergencyContext';
 import './index.css';
@@ -18,11 +20,15 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <EmergencyProvider>
-          <App />
-        </EmergencyProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <EmergencyProvider>
+              <App />
+            </EmergencyProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

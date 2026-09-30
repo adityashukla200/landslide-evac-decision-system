@@ -44,6 +44,17 @@ def db_session():
     session.close()
 
 
+from backend.app.core.security import create_access_token
+from backend.app.db.seeds_officers import seed_officers
+
+
+@pytest.fixture(scope="module")
+def auth_headers(db_session):
+    seed_officers()
+    token = create_access_token({"sub": "ddmo.uttarkashi@uk.gov.in", "role": "admin"})
+    return {"Authorization": f"Bearer {token}"}
+
+
 @pytest.fixture(scope="module")
 def setup_village(db_session):
     """Retrieve existing pilot village with pre-seeded recipients."""
@@ -190,6 +201,14 @@ def test_cap_12_drill_xml(setup_village):
 
 def test_alert_fatigue_suppression(setup_village, db_session):
     """Verify same-tier alert within cooldown is suppressed, but higher tier overrides."""
+    db_session.query(AlertDelivery).filter(
+        AlertDelivery.alert_id.in_(
+            db_session.query(Alert.id).filter(Alert.village_id == setup_village.id)
+        )
+    ).delete(synchronize_session=False)
+    db_session.query(Alert).filter(Alert.village_id == setup_village.id).delete(synchronize_session=False)
+    db_session.commit()
+
     now = datetime.now(timezone.utc)
     base_alert = Alert(
         id=f"ALT_FATIGUE_{uuid.uuid4().hex[:8]}",
@@ -361,7 +380,7 @@ def test_ack_tracking_and_metrics(setup_village, db_session):
 # 5. FASTAPI API INTEGRATION TESTS
 # ---------------------------------------------------------------------------
 
-def test_api_trigger_and_reach_flow(client, setup_village, db_session):
+def test_api_trigger_and_reach_flow(client, setup_village, db_session, auth_headers):
     """Integration test: trigger alert -> get CAP XML -> acknowledge -> get reach metrics."""
     recipients = db_session.query(Recipient).filter(Recipient.village_id == setup_village.id).all()
     # 1. Trigger Alert
@@ -374,6 +393,7 @@ def test_api_trigger_and_reach_flow(client, setup_village, db_session):
             "override_cooldown": True,
             "escalation_window_sec": 0.01,
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -404,7 +424,7 @@ def test_api_trigger_and_reach_flow(client, setup_village, db_session):
     assert reach_data["summary"]["reach_percentage"] > 0
 
 
-def test_api_community_reports_and_vetting(client, setup_village):
+def test_api_community_reports_and_vetting(client, setup_village, auth_headers):
     """Integration test: submit community hazard observation -> list -> review as ground truth."""
     # 1. Submit report
     rep_resp = client.post(
@@ -439,6 +459,7 @@ def test_api_community_reports_and_vetting(client, setup_village):
             "review_notes": "Ground inspection confirmed 40m debris slide.",
             "is_ground_truth_candidate": True,
         },
+        headers=auth_headers,
     )
     assert rev_resp.status_code == 200
     rev_data = rev_resp.json()
@@ -446,7 +467,7 @@ def test_api_community_reports_and_vetting(client, setup_village):
     assert rev_data["is_ground_truth_candidate"] is True
 
 
-def test_api_drill_mode(client, setup_village):
+def test_api_drill_mode(client, setup_village, auth_headers):
     """Integration test: trigger exercise drill -> inspect drill participation report."""
     resp = client.post(
         "/api/drills/trigger",
@@ -457,6 +478,7 @@ def test_api_drill_mode(client, setup_village):
             "override_cooldown": True,
             "escalation_window_sec": 0.01,
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     drill_id = resp.json()["alert_id"]

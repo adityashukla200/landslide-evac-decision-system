@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { Modal } from '../common/Modal';
 import { RiskTier } from '../../types';
 import {
@@ -29,6 +30,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
 }) => {
   const { villages, triggerEmergencyAlert } = useEmergency();
   const { isOfficer, openLoginModal } = useAuth();
+  const { success, error } = useToast();
 
   const [selectedVillageId, setSelectedVillageId] = useState<string>(
     defaultVillageId || villages[1]?.id || 'VIL_UTK_07'
@@ -87,11 +89,13 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
     setIsSubmitting(true);
     try {
       await triggerEmergencyAlert(selectedVillage.id, tier, currentMessage);
+      success(`Emergency ${tier} alert dispatched to ${selectedVillage.name}! Cell Broadcast & Sirens triggered.`, 'Directive Broadcasted');
       setIsSubmitting(false);
       setIsConfirming(false);
       onClose();
     } catch (e) {
       setIsSubmitting(false);
+      error('Failed to dispatch alert. Please check your connectivity.', 'Dispatch Error');
     }
   };
 
@@ -104,17 +108,17 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
       maxWidth="xl"
     >
       {!isConfirming ? (
-        <div className="space-y-4 font-mono text-xs text-slate-200">
+        <div className="space-y-4 font-mono text-xs text-slate-800 dark:text-slate-200">
           {/* Target Village & Tier Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1 font-bold">
+              <label className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1 font-bold">
                 Target Village / Ward
               </label>
               <select
                 value={selectedVillageId}
                 onChange={(e) => setSelectedVillageId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs font-mono outline-none focus:border-orange-500"
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs font-mono outline-none focus:border-orange-500"
               >
                 {villages.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -125,7 +129,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1 font-bold">
+              <label className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-1 font-bold">
                 Directive Severity Tier
               </label>
               <div className="grid grid-cols-3 gap-1.5">
@@ -137,11 +141,11 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
                     className={`py-2 px-1 rounded-md text-[11px] font-bold border transition-all ${
                       tier === t
                         ? t === 'EVACUATE'
-                          ? 'bg-red-600 border-red-400 text-white shadow-md'
+                          ? 'bg-red-600 border-red-500 text-white shadow-md'
                           : t === 'WARNING'
-                          ? 'bg-orange-600 border-orange-400 text-white shadow-md'
-                          : 'bg-amber-600 border-amber-400 text-white shadow-md'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-orange-600 border-orange-500 text-white shadow-md'
+                          : 'bg-amber-600 border-amber-500 text-white shadow-md'
+                        : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {t}
@@ -152,21 +156,21 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
           </div>
 
           {/* Citizen Screen Preview Box */}
-          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <div className="flex items-center gap-1.5 text-orange-400 font-bold">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
+              <div className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400 font-bold">
                 <Smartphone className="w-4 h-4" />
                 <span>CITIZEN HANDSET PREVIEW</span>
               </div>
 
               {/* Language Switcher */}
-              <div className="flex items-center gap-1 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                <Languages className="w-3 h-3 text-slate-400" />
+              <div className="flex items-center gap-1 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                <Languages className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setLanguage('hi')}
                   className={`px-1.5 py-0.5 rounded text-[10px] ${
-                    language === 'hi' ? 'bg-orange-600 text-white font-bold' : 'text-slate-400'
+                    language === 'hi' ? 'bg-orange-600 text-white font-bold' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   हिन्दी
@@ -175,7 +179,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
                   type="button"
                   onClick={() => setLanguage('en')}
                   className={`px-1.5 py-0.5 rounded text-[10px] ${
-                    language === 'en' ? 'bg-orange-600 text-white font-bold' : 'text-slate-400'
+                    language === 'en' ? 'bg-orange-600 text-white font-bold' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   EN
@@ -184,8 +188,8 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
             </div>
 
             {/* Simulated Mobile SMS bubble */}
-            <div className="p-3 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 relative">
-              <div className="flex items-center gap-1 text-[10px] text-red-400 font-bold uppercase mb-1">
+            <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 relative">
+              <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase mb-1">
                 <AlertOctagon className="w-3.5 h-3.5" />
                 <span>GOVT OF INDIA • EMERGENCY CELL BROADCAST</span>
               </div>
@@ -201,7 +205,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
                 type="button"
                 onClick={handlePlayVoice}
                 disabled={isPlayingAudio}
-                className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-bold"
+                className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 font-bold"
               >
                 <Volume2 className={`w-3.5 h-3.5 ${isPlayingAudio ? 'animate-ping' : ''}`} />
                 <span>{isPlayingAudio ? 'Playing Voice Stream...' : 'Test Audio Broadcast'}</span>
@@ -211,18 +215,18 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono transition-colors"
             >
               CANCEL
             </button>
             <button
               type="button"
               onClick={() => setIsConfirming(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold font-mono tracking-wider transition-colors shadow-lg shadow-red-950"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold font-mono tracking-wider transition-colors shadow-lg shadow-red-950/20 dark:shadow-red-950"
             >
               <Send className="w-3.5 h-3.5" />
               <span>REVIEW & CONFIRM DISPATCH</span>
@@ -231,42 +235,42 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
         </div>
       ) : (
         /* Error-Prevention Confirmation Dialog */
-        <div className="space-y-4 font-mono text-xs text-slate-200">
-          <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-500/50 space-y-2">
-            <div className="flex items-center gap-2 text-red-300 font-bold text-sm">
-              <ShieldAlert className="w-5 h-5 text-red-400 animate-pulse" />
+        <div className="space-y-4 font-mono text-xs text-slate-800 dark:text-slate-200">
+          <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-500/50 space-y-2">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-300 font-bold text-sm">
+              <ShieldAlert className="w-5 h-5 text-red-600 dark:text-red-400 animate-pulse" />
               <span>CRITICAL: CONFIRM EMERGENCY DISPATCH</span>
             </div>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-700 dark:text-slate-300">
               This action will trigger an immediate emergency broadcast across multiple public channels in{' '}
-              <strong className="text-white">{selectedVillage.name}</strong>.
+              <strong className="text-slate-900 dark:text-white">{selectedVillage.name}</strong>.
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-red-800/60">
+            <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-red-200 dark:border-red-800/60">
               <div>
-                <span className="text-slate-400">Target Residents:</span>
-                <span className="font-bold text-white block">{selectedVillage.population.toLocaleString()} citizens</span>
+                <span className="text-slate-500 dark:text-slate-400">Target Residents:</span>
+                <span className="font-bold text-slate-900 dark:text-white block">{selectedVillage.population.toLocaleString()} citizens</span>
               </div>
               <div>
-                <span className="text-slate-400">Severity Tier:</span>
-                <span className="font-bold text-red-400 block">{tier}</span>
+                <span className="text-slate-500 dark:text-slate-400">Severity Tier:</span>
+                <span className="font-bold text-red-600 dark:text-red-400 block">{tier}</span>
               </div>
               <div>
-                <span className="text-slate-400">Lead Time Remaining:</span>
-                <span className="font-bold text-orange-400 block">~{selectedVillage.risk.leadTimeMinutes} minutes</span>
+                <span className="text-slate-500 dark:text-slate-400">Lead Time Remaining:</span>
+                <span className="font-bold text-orange-600 dark:text-orange-400 block">~{selectedVillage.risk.leadTimeMinutes} minutes</span>
               </div>
               <div>
-                <span className="text-slate-400">Primary Refuge:</span>
-                <span className="font-bold text-white block">Inter College Shelter</span>
+                <span className="text-slate-500 dark:text-slate-400">Primary Refuge:</span>
+                <span className="font-bold text-slate-900 dark:text-white block">Inter College Shelter</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => setIsConfirming(false)}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono transition-colors"
             >
               BACK TO EDIT
             </button>
@@ -274,7 +278,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
               type="button"
               disabled={isSubmitting}
               onClick={handleDispatch}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-black font-mono tracking-wider transition-colors shadow-xl shadow-red-950"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-black font-mono tracking-wider transition-colors shadow-xl shadow-red-950/20 dark:shadow-red-950"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSubmitting ? 'DISPATCHING...' : 'AUTHORIZE & DISPATCH'}</span>

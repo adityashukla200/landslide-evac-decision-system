@@ -18,49 +18,259 @@
   }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   CSS Variable Theming System: Light (Default) vs Dark Mode
+───────────────────────────────────────────────────────────── */
+:root {
+  --theme-mode: light;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-header: #ffffff;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  /* Risk Tiers - High Contrast Light Mode (WCAG AA Compliant) */
+  --risk-watch-bg: #fef3c7;
+  --risk-watch-text: #92400e;
+  --risk-watch-border: #d97706;
+
+  --risk-warning-bg: #ffedd5;
+  --risk-warning-text: #9a3412;
+  --risk-warning-border: #ea580c;
+
+  --risk-evacuate-bg: #fee2e2;
+  --risk-evacuate-text: #991b1b;
+  --risk-evacuate-border: #dc2626;
+
+  --risk-safe-bg: #dcfce7;
+  --risk-safe-text: #166534;
+  --risk-safe-border: #16a34a;
+
+  /* Chart & Map Colors */
+  --chart-grid: #e2e8f0;
+  --chart-axis: #64748b;
+  --chart-text: #0f172a;
+  --map-style-url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+}
+
+html.dark {
+  --theme-mode: dark;
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-header: #020617;
+  --bg-card: #0b1120;
+  --border-color: #1e293b;
+  --border-subtle: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Risk Tiers - High Contrast Dark Mode */
+  --risk-watch-bg: rgba(120, 53, 15, 0.45);
+  --risk-watch-text: #fcd34d;
+  --risk-watch-border: #d97706;
+
+  --risk-warning-bg: rgba(124, 45, 18, 0.45);
+  --risk-warning-text: #fdba74;
+  --risk-warning-border: #ea580c;
+
+  --risk-evacuate-bg: rgba(127, 29, 29, 0.55);
+  --risk-evacuate-text: #fca5a5;
+  --risk-evacuate-border: #dc2626;
+
+  --risk-safe-bg: rgba(6, 78, 59, 0.45);
+  --risk-safe-text: #86efac;
+  --risk-safe-border: #16a34a;
+
+  /* Chart & Map Colors */
+  --chart-grid: #334155;
+  --chart-axis: #94a3b8;
+  --chart-text: #f8fafc;
+  --map-style-url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  background-color: #020617;
-  color: #f8fafc;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Custom scrollbars for emergency operations console */
-::-webkit-scrollbar {
+/* ─────────────────────────────────────────────────────────────
+   Global Light Mode Palette Overrides (when html does NOT have .dark)
+───────────────────────────────────────────────────────────── */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Background conversions */
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-slate-950\/95,
+html:not(.dark) .bg-slate-950\/90,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/60 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-slate-900,
+html:not(.dark) .bg-slate-900\/95,
+html:not(.dark) .bg-slate-900\/90,
+html:not(.dark) .bg-slate-900\/80,
+html:not(.dark) .bg-slate-900\/60 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-slate-800,
+html:not(.dark) .bg-slate-800\/80,
+html:not(.dark) .bg-slate-800\/60 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:bg-slate-900:hover,
+html:not(.dark) .hover\:bg-slate-800:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .from-slate-950 {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
+}
+html:not(.dark) .via-slate-900 {
+  --tw-gradient-stops: var(--tw-gradient-from), #ffffff var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+html:not(.dark) .to-slate-950 {
+  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position) !important;
+}
+
+/* Borders */
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography */
+html:not(.dark) .text-slate-100 {
+  color: #0f172a !important;
+}
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+html:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important;
+}
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Shadow enhancements for light mode cards */
+html:not(.dark) .shadow-2xl,
+html:not(.dark) .shadow-lg,
+html:not(.dark) .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Form controls in light mode */
+html:not(.dark) select,
+html:not(.dark) input,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Scrollbars */
+html:not(.dark) ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-::-webkit-scrollbar-track {
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+html.dark ::-webkit-scrollbar-track {
   background: #090d16;
 }
-::-webkit-scrollbar-thumb {
+html.dark ::-webkit-scrollbar-thumb {
   background: #1e293b;
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
+html.dark ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
 
-/* MapLibre dark popup styling */
-.citizen-popup .maplibregl-popup-content {
-  background: transparent;
-  padding: 0;
-  box-shadow: none;
+/* MapLibre popup styling */
+html:not(.dark) .citizen-popup .maplibregl-popup-content {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
-.citizen-popup .maplibregl-popup-tip {
+html:not(.dark) .citizen-popup .maplibregl-popup-tip {
+  border-top-color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+html:not(.dark) .citizen-popup .maplibregl-popup-close-button {
+  color: #64748b;
+  padding: 4px 8px;
+  font-size: 16px;
+}
+html:not(.dark) .citizen-popup .maplibregl-popup-close-button:hover {
+  color: #0f172a;
+  background: transparent;
+}
+
+html.dark .citizen-popup .maplibregl-popup-content {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 0;
+  box-shadow: none;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+}
+html.dark .citizen-popup .maplibregl-popup-tip {
   border-top-color: #0f172a;
   border-bottom-color: #0f172a;
 }
-.citizen-popup .maplibregl-popup-close-button {
+html.dark .citizen-popup .maplibregl-popup-close-button {
   color: #94a3b8;
   padding: 4px 8px;
   font-size: 16px;
 }
-.citizen-popup .maplibregl-popup-close-button:hover {
+html.dark .citizen-popup .maplibregl-popup-close-button:hover {
   color: #ffffff;
   background: transparent;
 }
-

@@ -16,10 +16,16 @@ import {
   MessageSquare,
   ArrowLeft,
   Info,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { reportService, QueuedOfflineReport } from '../services/reportService';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 
 export const CitizenReportPage: React.FC = () => {
+  const { isDark, toggleTheme } = useTheme();
+  const { success: showSuccessToast, error: showErrorToast } = useToast();
   const [language, setLanguage] = useState<'en' | 'hi'>('hi');
   const [reportedFlood, setReportedFlood] = useState<boolean>(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -52,47 +58,51 @@ export const CitizenReportPage: React.FC = () => {
     document.title = 'Hyper-Local FlashFlood Prediction — Report';
   }, []);
 
-  // Dictionary for Bilingual text
+  // Dictionary for Bilingual text (Plain, empathetic language)
   const t = {
-    title: language === 'hi' ? 'नागरिक जमीनी रिपोर्ट' : 'Citizen Ground-Truth Report',
+    title: language === 'hi' ? 'आपदा रिपोर्ट भेजें' : 'Report Flood or Landslide',
     subtitle:
       language === 'hi'
-        ? 'अपने गाँव/वार्ड में बाढ़ या भूस्खलन की स्थिति की फोटो/वीडियो भेजें'
-        : 'Report live flood or landslide ground truth with geotagged media',
+        ? 'गाँव और राहत दल को सतर्क करने के लिए एक फोटो या वीडियो साझा करें'
+        : 'Share a photo or video to alert local rescue teams and your village',
     questionTitle:
-      language === 'hi' ? 'क्या यहाँ बाढ़ या भूस्खलन हो रहा है?' : 'Is there flooding or a landslide here?',
-    yesFlood: language === 'hi' ? 'हाँ, बाढ़ / भूस्खलन है' : 'Yes, Flooding / Landslide',
-    noFlood: language === 'hi' ? 'नहीं, कोई बाढ़ नहीं (सुरक्षित)' : 'No Flood / False Alarm',
-    photoVideoLabel: language === 'hi' ? 'फोटो या छोटा वीडियो जोड़ें' : 'Add Photo or Short Video',
-    chooseFile: language === 'hi' ? 'कैमरा या गैलरी से चुनें' : 'Take Photo or Choose File',
+      language === 'hi' ? 'यहाँ स्थिति कैसी है?' : 'What is the current ground situation?',
+    yesFlood: language === 'hi' ? '⚠️ बाढ़ या भूस्खलन है' : '⚠️ Flooding or Landslide Active',
+    noFlood: language === 'hi' ? '✅ सुरक्षित है / कोई बाढ़ नहीं' : '✅ Area is Safe / Water Receded',
+    photoVideoLabel: language === 'hi' ? 'फोटो या वीडियो जोड़ें' : 'Add Photo or Video',
+    chooseFile: language === 'hi' ? 'कैमरा खोलें या गैलरी से चुनें' : 'Open Camera or Choose File',
     fileSizeHint:
       language === 'hi'
-        ? 'अधिकतम: फोटो 20MB, वीडियो 60MB (JPG, PNG, MP4, MOV)'
-        : 'Max: Photo 20MB, Video 60MB (JPG, PNG, MP4, MOV)',
-    gpsTitle: language === 'hi' ? 'आपकी लाइव लोकेशन (GPS)' : 'Your Live Location (GPS)',
-    gpsFetching: language === 'hi' ? 'GPS लोकेशन खोजी जा रही है...' : 'Acquiring GPS fix...',
-    gpsSuccess: language === 'hi' ? 'सटीक लोकेशन प्राप्त हुई' : 'GPS location acquired',
+        ? 'फोटो या वीडियो (JPG, PNG, MP4) • 60MB तक'
+        : 'Photo or video up to 60MB (JPG, PNG, MP4)',
+    gpsTitle: language === 'hi' ? 'आपकी लोकेशन (GPS)' : 'Your Location (GPS)',
+    gpsFetching: language === 'hi' ? 'GPS से लोकेशन खोजी जा रही है...' : 'Finding your exact location...',
+    gpsSuccess: language === 'hi' ? 'सटीक लोकेशन मिल गई' : 'Exact location acquired',
     gpsFallback:
-      language === 'hi' ? 'मैन्युअल रूप से लोकेशन दर्ज करें' : 'Enter location manually / Pick preset',
-    captionLabel: language === 'hi' ? 'विवरण या लैंडमार्क (वैकल्पिक)' : 'Notes / Landmark (Optional)',
+      language === 'hi' ? 'गाँव की सूची से चुनें' : 'Choose village from list',
+    captionLabel: language === 'hi' ? 'क्या हो रहा है? (विवरण लिखें)' : 'What is happening? (Optional notes)',
     captionPlaceholder:
       language === 'hi'
-        ? 'उदा. पुल के पास पानी सड़क पर आ गया है, पत्थर गिर रहे हैं...'
-        : 'e.g. River breached road culvert near temple, boulders falling...',
-    phoneLabel: language === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Phone (Optional)',
-    phonePlaceholder: language === 'hi' ? 'सत्यापन के लिए 10 अंकों का नंबर' : 'For rescue team callback',
-    submitBtn: language === 'hi' ? 'रिपोर्ट सबमिट करें' : 'Submit Ground-Truth Report',
-    submittingBtn: language === 'hi' ? 'अपलोड हो रहा है...' : 'Uploading Report...',
+        ? 'उदा. सड़क पर मलबा आ गया है, पानी तेजी से बढ़ रहा है...'
+        : 'e.g. Water rising rapidly near bridge, boulders on road...',
+    phoneLabel: language === 'hi' ? 'मोबाइल नंबर (मदद और संपर्क के लिए)' : 'Mobile Phone (For rescue team callback)',
+    phonePlaceholder: language === 'hi' ? '10 अंकों का फोन नंबर' : '10-digit mobile number',
+    submitBtn: language === 'hi' ? 'तुरंत रिपोर्ट भेजें' : 'Send Report Now',
+    submittingBtn: language === 'hi' ? 'भेजा जा रहा है...' : 'Sending Report...',
     successMsg:
       language === 'hi'
-        ? 'धन्यवाद, आपकी रिपोर्ट प्राप्त हो गई है और यह आपके गाँव की सुरक्षा में मदद करेगी।'
-        : 'Thank you, your report was received and will help protect your village.',
+        ? 'धन्यवाद! आपकी रिपोर्ट प्राप्त हो गई है। आपकी सतर्कता से गाँव सुरक्षित रहेगा।'
+        : 'Thank you! Your report was received. Your vigilance helps keep your community safe.',
     offlineNotice:
       language === 'hi'
-        ? 'इंटरनेट बंद है। आपकी रिपोर्ट फोन में सुरक्षित कर ली गई है और नेटवर्क आते ही अपने आप सबमिट हो जाएगी।'
-        : 'You are offline. Your report is saved locally and will auto-upload as soon as network is restored.',
-    viewPublicAdvisories: language === 'hi' ? 'सार्वजनिक चेतावनियां देखें' : 'View Public Advisories',
+        ? 'इंटरनेट बंद है। आपकी रिपोर्ट फोन में सुरक्षित है और नेटवर्क आते ही अपने आप पहुँच जाएगी।'
+        : 'You are offline. Your report is saved locally and will send automatically when online.',
+    viewPublicAdvisories: language === 'hi' ? 'गाँव के सुरक्षित आश्रय देखें' : 'View Safe Shelters & Routes',
     submitAnother: language === 'hi' ? 'एक और रिपोर्ट भेजें' : 'Submit Another Report',
+    privacyNote:
+      language === 'hi'
+        ? '🔒 आपकी गोपनीयता सुरक्षित है: व्यक्तिगत जानकारी अपने आप हटा दी जाती है।'
+        : '🔒 Privacy Protected: Personal device details are stripped automatically.',
   };
 
   // Check offline queue count on mount
@@ -259,10 +269,12 @@ export const CitizenReportPage: React.FC = () => {
       setIsSubmitting(false);
       setIsSuccess(true);
       setIsOfflineQueued(false);
+      showSuccessToast(t.successMsg, 'Report Submitted');
     } catch (err: any) {
       setIsSubmitting(false);
-      // If network failed during upload, offer offline queueing
-      setErrorMessage(err.message || 'Submission error. Please retry.');
+      const errMsg = err.message || 'Submission error. Please retry.';
+      setErrorMessage(errMsg);
+      showErrorToast(errMsg, 'Submission Error');
     }
   };
 
@@ -293,13 +305,28 @@ export const CitizenReportPage: React.FC = () => {
           <span>{t.title}</span>
         </h1>
 
-        <button
-          onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-bold text-orange-400 border border-slate-700 transition-colors"
-        >
-          <Languages className="w-3.5 h-3.5" />
-          <span>{language === 'hi' ? 'English' : 'हिन्दी'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors shadow-sm"
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            aria-label="Toggle Light and Dark Theme"
+          >
+            {isDark ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-indigo-400" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-xs font-bold text-orange-400 border border-slate-700 transition-colors"
+          >
+            <Languages className="w-3.5 h-3.5" />
+            <span>{language === 'hi' ? 'English' : 'हिन्दी'}</span>
+          </button>
+        </div>
       </header>
 
       {/* Network Alert Banner */}
@@ -625,28 +652,33 @@ export const CitizenReportPage: React.FC = () => {
               </div>
             )}
 
-            {/* Big Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all shadow-xl flex items-center justify-center gap-2 ${
-                isSubmitting
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-orange-950/60 active:scale-[0.98]'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>{t.submittingBtn}</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-5 h-5" />
-                  <span>{t.submitBtn}</span>
-                </>
-              )}
-            </button>
+            {/* Sticky Submit Button for effortless one-handed thumb access */}
+            <div className="sticky bottom-3 z-30 pt-2 pb-1 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent dark:from-slate-950 dark:via-slate-950/95">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full py-3.5 min-h-[50px] rounded-2xl font-bold text-sm uppercase tracking-wider transition-all shadow-xl flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-orange-500 ${
+                  isSubmitting
+                    ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-orange-950/20 dark:shadow-orange-950/60 active:scale-[0.98]'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{t.submittingBtn}</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    <span>{t.submitBtn}</span>
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-center text-slate-500 dark:text-slate-400 mt-2">
+                {t.privacyNote}
+              </p>
+            </div>
           </form>
         )}
       </main>

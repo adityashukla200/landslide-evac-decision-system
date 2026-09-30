@@ -1,5 +1,6 @@
 import React from 'react';
 import { RiskAssessment } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
 
 interface RiskTimelineProps {
   risk: RiskAssessment;
@@ -7,6 +8,10 @@ interface RiskTimelineProps {
 }
 
 export const RiskTimeline: React.FC<RiskTimelineProps> = ({ risk, height = 180 }) => {
+  const { isDark } = useTheme();
+  const gridColor = isDark ? '#1e293b' : '#e2e8f0';
+  const labelColor = isDark ? '#94a3b8' : '#475569';
+  const pointBorder = isDark ? '#0f172a' : '#ffffff';
   // Generate realistic 12-hour history + 6-hour forecast points based on village explanation
   const points = [
     { t: '-12h', rain: 4.2, sat: 45, prob: 0.05, type: 'observed' },
@@ -57,8 +62,8 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ risk, height = 180 }
           const y = getYProb(level);
           return (
             <g key={level}>
-              <line x1={padX} y1={y} x2={w - padX} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-              <text x={padX - 6} y={y + 3} textAnchor="end" fill="#64748b" fontSize="9">
+              <line x1={padX} y1={y} x2={w - padX} y2={y} stroke={gridColor} strokeDasharray="3 3" />
+              <text x={padX - 6} y={y + 3} textAnchor="end" fill={labelColor} fontSize="9">
                 {Math.round(level * 100)}%
               </text>
             </g>
@@ -66,19 +71,19 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ risk, height = 180 }
         })}
 
         {/* Observed vs Forecast Boundary Shading */}
-        <rect x={nowX} y={padY} width={w - padX - nowX} height={h - 2 * padY} fill="#f97316" fillOpacity="0.04" />
+        <rect x={nowX} y={padY} width={w - padX - nowX} height={h - 2 * padY} fill="#f97316" fillOpacity={isDark ? 0.04 : 0.08} />
 
         {/* Vertical NOW line */}
         <line x1={nowX} y1={padY - 8} x2={nowX} y2={h - padY + 6} stroke="#f97316" strokeWidth="1.5" strokeDasharray="4 2" />
-        <text x={nowX} y={padY - 12} textAnchor="middle" fill="#f97316" fontSize="9" fontWeight="bold">
+        <text x={nowX} y={padY - 12} textAnchor="middle" fill="#ea580c" fontSize="9" fontWeight="bold">
           CURRENT (T₀)
         </text>
 
         {/* Rainfall Line (Blue) */}
-        <path d={rainPath} fill="none" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
+        <path d={rainPath} fill="none" stroke="#2563eb" strokeWidth="2" strokeOpacity="0.85" />
 
         {/* Landslide Risk Probability Line (Red / Gradient) */}
-        <path d={probPath} fill="none" stroke="#ef4444" strokeWidth="2.5" />
+        <path d={probPath} fill="none" stroke="#dc2626" strokeWidth="2.5" />
 
         {/* Points */}
         {points.map((pt, i) => {
@@ -91,11 +96,11 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ risk, height = 180 }
                 cx={x}
                 cy={yP}
                 r={isNow ? 4.5 : 2.5}
-                fill={isNow ? '#ef4444' : pt.type === 'predicted' ? '#f97316' : '#94a3b8'}
-                stroke="#0f172a"
+                fill={isNow ? '#dc2626' : pt.type === 'predicted' ? '#ea580c' : '#64748b'}
+                stroke={pointBorder}
                 strokeWidth="1.5"
               />
-              <text x={x} y={h - padY + 14} textAnchor="middle" fill={isNow ? '#f97316' : '#64748b'} fontSize="8.5">
+              <text x={x} y={h - padY + 14} textAnchor="middle" fill={isNow ? '#ea580c' : labelColor} fontSize="8.5">
                 {pt.t}
               </text>
             </g>

@@ -5,6 +5,8 @@ import { RiskBadge } from '../common/RiskBadge';
 import { RiskTimeline } from './RiskTimeline';
 import { reportService, CitizenReportItem } from '../../services/reportService';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { CardSkeleton } from '../common/Skeleton';
 import { BACKEND_URL } from '../../services/api';
 import {
   X,
@@ -44,6 +46,7 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
   onTriggerAlert,
 }) => {
   const { isOfficer, officer, openLoginModal, getValidAccessToken } = useAuth();
+  const { success, error } = useToast();
   const [citizenReports, setCitizenReports] = useState<CitizenReportItem[]>([]);
   const [loadingReports, setLoadingReports] = useState<boolean>(false);
   const [activeMedia, setActiveMedia] = useState<CitizenReportItem | null>(null);
@@ -76,6 +79,12 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
     setCitizenReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
     );
+    success(
+      newStatus === 'verified'
+        ? 'Ground-truth report verified and marked as trustworthy.'
+        : 'Report marked as false alarm.',
+      'Report Vetted'
+    );
   };
 
   const handleSaveThresholds = async () => {
@@ -103,15 +112,16 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
         }),
       });
       if (res.ok) {
+        success(`Operational thresholds updated for ${village.name}.`, 'Thresholds Saved');
         setThresholdSuccessMsg('Thresholds saved successfully.');
         setTimeout(() => setThresholdSuccessMsg(null), 3000);
         setIsEditingThresholds(false);
       } else {
         const err = await res.json().catch(() => ({ detail: 'Failed to update thresholds' }));
-        alert(err.detail || 'Failed to update thresholds');
+        error(err.detail || 'Failed to update thresholds', 'Calibration Error');
       }
     } catch (e: any) {
-      alert(e.message || 'Network error updating thresholds');
+      error(e.message || 'Network error updating thresholds', 'Connection Error');
     } finally {
       setSavingThresholds(false);
     }
@@ -125,26 +135,26 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
   const recommendedRoute = villageRoutes.find((r) => r.isRecommended) || villageRoutes[0];
   const targetShelter = shelters.find((s) => s.id === recommendedRoute?.toShelterId) || shelters[0];
 
-  // Factor of safety color
+  // Factor of safety color (WCAG AA compliant in both themes)
   const fosColor =
     explanation.factorOfSafety < 1.0
-      ? 'text-red-400 bg-red-950/80 border-red-500/50'
+      ? 'text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/80 border-red-400 dark:border-red-500/50'
       : explanation.factorOfSafety < 1.2
-      ? 'text-orange-400 bg-orange-950/80 border-orange-500/50'
-      : 'text-emerald-400 bg-emerald-950/80 border-emerald-500/50';
+      ? 'text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/80 border-orange-400 dark:border-orange-500/50'
+      : 'text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/80 border-emerald-400 dark:border-emerald-500/50';
 
   return (
-    <div className="w-96 md:w-[420px] bg-slate-950 border-l border-slate-800 h-full flex flex-col justify-between shadow-2xl z-30 font-mono text-xs overflow-y-auto select-none">
+    <div className="w-full sm:w-96 md:w-[420px] max-w-full fixed sm:relative right-0 top-0 sm:top-auto bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 h-full flex flex-col justify-between shadow-2xl z-30 font-mono text-xs overflow-y-auto select-none transition-all duration-300 animate-slide-in-right">
       {/* Panel Header */}
       <div>
-        <div className="p-4 border-b border-slate-800 bg-slate-900/60 sticky top-0 backdrop-blur z-10">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/60 sticky top-0 backdrop-blur z-10">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div>
-              <span className="text-[10px] text-orange-400 uppercase tracking-widest font-bold block">
+              <span className="text-[10px] text-orange-600 dark:text-orange-400 uppercase tracking-widest font-bold block">
                 VILLAGE / WARD DOSSIER
               </span>
-              <h2 className="text-lg font-black text-slate-100">{village.name}</h2>
-              <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">{village.name}</h2>
+              <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
                 <span>{village.district}</span>
                 <span>•</span>
                 <span>Elev: {village.elevationM}m</span>
@@ -154,7 +164,7 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -162,7 +172,7 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
 
           <div className="flex items-center justify-between gap-2 mt-2">
             <RiskBadge tier={risk.tier} size="md" />
-            <div className="flex items-center gap-1.5 text-red-400 font-bold bg-red-950/80 px-2.5 py-1 rounded border border-red-500/40">
+            <div className="flex items-center gap-1.5 text-red-700 dark:text-red-400 font-bold bg-red-100 dark:bg-red-950/80 px-2.5 py-1 rounded border border-red-400 dark:border-red-500/40">
               <Clock className="w-3.5 h-3.5 animate-pulse" />
               <span>LEAD TIME: ~{risk.leadTimeMinutes} MIN</span>
             </div>
@@ -408,7 +418,7 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
             </div>
 
             {loadingReports ? (
-              <div className="text-slate-500 text-[10px] text-center py-3">Loading observations...</div>
+              <CardSkeleton rows={2} />
             ) : citizenReports.length === 0 ? (
               <div className="text-center py-3 space-y-2">
                 <p className="text-slate-500 text-[11px]">No citizen field reports for this village yet.</p>

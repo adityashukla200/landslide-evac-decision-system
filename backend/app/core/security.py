@@ -157,7 +157,9 @@ def get_current_officer(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        officer = db.query(Officer).filter(Officer.id == officer_id).first()
+        officer = db.query(Officer).filter(
+            (Officer.id == officer_id) | (Officer.email == officer_id)
+        ).first()
         if not officer:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

@@ -544,7 +544,7 @@ class TestSensorAPI:
     def client(self):
         from fastapi.testclient import TestClient
         from backend.app.main import app
-        self.client = TestClient(app)
+        self.client = TestClient(app, headers={"X-User-Role": "officer"})
 
     def test_get_registry_returns_25_villages(self):
         resp = self.client.get("/api/v1/sensors/registry")

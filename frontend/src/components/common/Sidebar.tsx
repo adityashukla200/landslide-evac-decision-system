@@ -76,8 +76,8 @@ export const Sidebar: React.FC<SidebarProps> = () => {
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2 rounded-md text-xs font-mono tracking-wide transition-all ${
                     isActive
-                      ? 'bg-orange-950/80 border border-orange-500/40 text-orange-300 font-bold shadow-sm shadow-orange-950/50'
-                      : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200 border border-transparent'
+                      ? 'bg-orange-100 dark:bg-orange-950/80 border border-orange-400 dark:border-orange-500/40 text-orange-950 dark:text-orange-300 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
                   }`
                 }
               >

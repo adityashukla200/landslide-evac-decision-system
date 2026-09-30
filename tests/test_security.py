@@ -112,5 +112,9 @@ def test_rate_limiting_headers_present(client):
 
 def test_input_validation_thresholds(client):
     # Watch threshold out of bounds (> 0.999)
-    resp = client.put("/api/v1/thresholds/VIL_UTK_01", json={"watch_threshold": 1.5})
+    resp = client.put(
+        "/api/v1/thresholds/VIL_UTK_01",
+        headers={"X-User-Role": "officer"},
+        json={"watch_threshold": 1.5},
+    )
     assert resp.status_code in [404, 422]  # either village not found or 422 invalid payload
