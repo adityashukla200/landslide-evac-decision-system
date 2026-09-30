@@ -69,6 +69,8 @@ export interface Route {
   isBlocked: boolean;
   isRecommended: boolean;
   description?: string;
+  coordinates?: [number, number][]; // LineString [lon, lat] waypoints
+  roadType?: 'HIGHWAY' | 'SECONDARY_ROAD' | 'PEDESTRIAN_TRAIL' | '4X4_TRACK';
 }
 
 export interface Shelter {

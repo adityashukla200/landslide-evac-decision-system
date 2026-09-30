@@ -82,10 +82,10 @@ export const LayerControl: React.FC<LayerControlProps> = ({
         </label>
         <div className="space-y-1">
           {[
-            { key: 'villages', label: 'Village Risk Polygons', count: '25' },
+            { key: 'villages', label: 'Village Risk Nodes', count: '25' },
             { key: 'citizenReports', label: 'Citizen Ground Reports', count: 'Live' },
-            { key: 'routes', label: 'Evacuation Trails & Cuts', count: '4' },
-            { key: 'shelters', label: 'High-Ground Shelters', count: '4' },
+            { key: 'routes', label: 'Evacuation Trails & Highway', count: '16' },
+            { key: 'shelters', label: 'High-Ground Shelters', count: '8' },
             { key: 'sensors', label: 'IoT Telemetry Sensors', count: '6' },
             { key: 'rainHeatmap', label: 'Precipitation Grid', count: 'Radar' },
           ].map((item) => {

@@ -4,6 +4,8 @@ import { RiskMap } from '../components/map/RiskMap';
 import { VillageDetailPanel } from '../components/risk/VillageDetailPanel';
 import { RiskBadge } from '../components/common/RiskBadge';
 import { AlertCreationModal } from '../components/alerts/AlertCreationModal';
+import { CopilotDrawer } from '../components/copilot/CopilotDrawer';
+import { PDNAModal } from '../components/institutional/PDNAModal';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -15,11 +17,16 @@ import {
   MapPin,
   HelpCircle,
   TrendingUp,
+  Bot,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export const CommandCenter: React.FC = () => {
   const { villages, routes, shelters, sensors, alerts, selectedVillage, setSelectedVillage } = useEmergency();
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isPDNAOpen, setIsPDNAOpen] = useState(false);
+
 
   // Key KPI calculations
   const evacuateVillages = villages.filter((v) => v.risk.tier === 'EVACUATE');
@@ -131,6 +138,26 @@ export const CommandCenter: React.FC = () => {
             selectedVillage={selectedVillage}
             onSelectVillage={(v) => setSelectedVillage(v)}
           />
+
+          {/* Floating Operator Action Suite */}
+          <div className="absolute bottom-5 left-5 z-20 flex items-center gap-2">
+            <button
+              onClick={() => setIsCopilotOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-950/60 flex items-center gap-2 border border-emerald-400/40 transition-all hover:scale-105 select-none"
+            >
+              <Bot className="w-4 h-4 animate-bounce" />
+              <span>AI COPILOT</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+            </button>
+
+            <button
+              onClick={() => setIsPDNAOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold shadow-lg shadow-black/50 flex items-center gap-2 border border-slate-700 transition-all hover:scale-105 select-none backdrop-blur-md"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+              <span>NDMA PDNA</span>
+            </button>
+          </div>
         </div>
 
         {/* Slideout Village Detail Dossier */}
@@ -152,6 +179,20 @@ export const CommandCenter: React.FC = () => {
         defaultVillageId={selectedVillage?.id}
         defaultTier={selectedVillage?.risk.tier === 'NONE' ? 'WARNING' : selectedVillage?.risk.tier}
       />
+
+      {/* AI Disaster Copilot Drawer */}
+      <CopilotDrawer
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        onOpenPDNAModal={() => setIsPDNAOpen(true)}
+      />
+
+      {/* NDMA PDNA Assessment Modal */}
+      <PDNAModal
+        isOpen={isPDNAOpen}
+        onClose={() => setIsPDNAOpen(false)}
+      />
     </div>
   );
 };
+

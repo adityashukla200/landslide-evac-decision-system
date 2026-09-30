@@ -279,7 +279,183 @@ class CitizenReport(Base):
     reviewed_at = Column(DateTime, nullable=True)
     audit_log = Column(JSON, nullable=True, default=list)
 
+    # Advanced Computer Vision (CV) Analysis
+    cv_water_fraction = Column(Float, nullable=True)  # 0.0 - 1.0 flood extent fraction
+    cv_estimated_depth_m = Column(Float, nullable=True)  # estimated flood stage in meters
+    cv_debris_velocity_ms = Column(Float, nullable=True)  # debris flow velocity m/s
+    cv_is_false_alarm = Column(Boolean, nullable=True, default=False)
+    cv_confidence = Column(Float, nullable=True)  # model prediction confidence 0.0 - 1.0
+    cv_model_version = Column(String(64), nullable=True)
+    cv_features = Column(JSON, nullable=True, default=dict)  # contours, bounding boxes, optical flow
+    cv_processed_at = Column(DateTime, nullable=True)
+
     # Relationships
     village = relationship("Village", back_populates="citizen_reports")
+
+
+# =============================================================================
+# Dimension 1: Satellite & Remote Sensing Models
+# =============================================================================
+
+class SatelliteObservation(Base):
+    """Satellite remote sensing product (Sentinel-1 SAR, Sentinel-2 Optical, NASA GPM, INSAT-3D)."""
+
+    __tablename__ = "satellite_observations"
+
+    id = Column(String(64), primary_key=True, index=True)
+    satellite_source = Column(String(32), nullable=False, index=True)  # SENTINEL_1, SENTINEL_2, NASA_GPM, INSAT_3D
+    acquisition_time = Column(DateTime, nullable=False, index=True)
+    product_type = Column(String(64), nullable=False, index=True)  # SAR_COHERENCE, OPTICAL_MNDWI, IMERG_NOWCAST, INSAT_TIR_COOLING
+    village_id = Column(String(64), ForeignKey("villages.id"), nullable=True, index=True)
+    bbox_geojson = Column(Text, nullable=True)
+    metrics = Column(JSON, nullable=False, default=dict)  # extracted physical metrics
+    risk_score_boost = Column(Float, nullable=False, default=0.0)  # calibrated threat bump [-0.5 to +0.5]
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    village = relationship("Village")
+
+
+# =============================================================================
+# Dimension 2: IoT Multi-Hop Mesh Models (LoRa / Meshtastic / Infrasound)
+# =============================================================================
+
+class MeshNode(Base):
+    """LoRa / Meshtastic multi-hop edge relay node."""
+
+    __tablename__ = "mesh_nodes"
+
+    id = Column(String(64), primary_key=True, index=True)
+    village_id = Column(String(64), ForeignKey("villages.id"), nullable=True, index=True)
+    node_hex = Column(String(16), unique=True, nullable=False, index=True)  # !a4b8c9d0
+    hardware_model = Column(String(32), nullable=False, default="SX1262_ESP32")
+    role = Column(String(32), nullable=False, default="ROUTER_CLIENT")  # ROUTER, GATEWAY, SENSOR, REPEATER
+    battery_mv = Column(Integer, nullable=False, default=3700)
+    battery_pct = Column(Float, nullable=False, default=100.0)
+    snr_db = Column(Float, nullable=False, default=8.5)
+    rssi_dbm = Column(Integer, nullable=False, default=-85)
+    infrasound_trigger = Column(Boolean, nullable=False, default=False)  # 1-30Hz GLOF rumble flag
+    last_heard_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    village = relationship("Village")
+
+
+class MeshPacket(Base):
+    """Raw and decoded LoRaWAN / Meshtastic packet log."""
+
+    __tablename__ = "mesh_packets"
+
+    id = Column(String(64), primary_key=True, index=True)
+    node_id = Column(String(64), ForeignKey("mesh_nodes.id"), nullable=False, index=True)
+    packet_type = Column(String(32), nullable=False)  # TELEMETRY, ALERT, INFRASOUND_RUMBLE, POSITION
+    payload_hex = Column(String(256), nullable=False)
+    decoded_json = Column(JSON, nullable=False, default=dict)
+    hop_count = Column(Integer, nullable=False, default=0)
+    gateway_uplinked = Column(Boolean, nullable=False, default=False)
+    received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    node = relationship("MeshNode")
+
+
+# =============================================================================
+# Dimension 3: Dynamic Evacuation & Shelter Capacity Models
+# =============================================================================
+
+class RouteSegmentLiveStatus(Base):
+    """Real-time passable / blocked status of evacuation trail or roadway segment."""
+
+    __tablename__ = "route_segment_live_status"
+
+    id = Column(String(64), primary_key=True, index=True)
+    route_id = Column(String(64), ForeignKey("routes.id"), nullable=False, index=True)
+    is_blocked = Column(Boolean, nullable=False, default=False)
+    block_reason = Column(String(64), nullable=True)  # RIVER_SURGE, DEBRIS_BLOCKAGE, BRIDGE_DAMAGE, ROCKFALL
+    current_water_depth_m = Column(Float, nullable=False, default=0.0)
+    landslide_runout_prob = Column(Float, nullable=False, default=0.0)
+    dynamic_travel_multiplier = Column(Float, nullable=False, default=1.0)  # 1.0=clear, >5.0=severely delayed, 999=impassable
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    route = relationship("Route")
+
+
+class ShelterLiveStatus(Base):
+    """Dynamic shelter occupancy and real-time load balancing diversion."""
+
+    __tablename__ = "shelter_live_status"
+
+    id = Column(String(64), primary_key=True, index=True)
+    shelter_id = Column(String(64), ForeignKey("shelters.id"), unique=True, nullable=False, index=True)
+    current_occupants = Column(Integer, nullable=False, default=0)
+    capacity = Column(Integer, nullable=False, default=100)
+    occupancy_pct = Column(Float, nullable=False, default=0.0)
+    is_overflow_diverting = Column(Boolean, nullable=False, default=False)  # True when >90% full
+    recommended_divert_shelter_id = Column(String(64), nullable=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    shelter = relationship("Shelter")
+
+
+# =============================================================================
+# Dimension 4: Extreme-Crisis Telecom & Broadcast Models
+# =============================================================================
+
+class EmergencyBroadcastLog(Base):
+    """Record of C-DOT Cell Broadcast Engine, NavIC, and Satellite-IoT dispatches."""
+
+    __tablename__ = "emergency_broadcast_logs"
+
+    id = Column(String(64), primary_key=True, index=True)
+    channel = Column(String(32), nullable=False, index=True)  # CDOT_CBE, NAVIC_IRNSS, BSNL_SAT_IOT, BLE_BEACON
+    alert_tier = Column(String(32), nullable=False)  # EVACUATE, WARNING, WATCH
+    target_area_wkt = Column(Text, nullable=True)
+    message_text = Column(String(256), nullable=False)
+    protocol_payload = Column(JSON, nullable=True, default=dict)
+    dispatch_status = Column(String(32), nullable=False, default="SUCCESS")  # SUCCESS, TRANSMITTING, FAILED
+    delivered_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+# =============================================================================
+# Dimension 5: Institutional & Post-Disaster Needs Assessment (PDNA) Models
+# =============================================================================
+
+class PDNADossier(Base):
+    """Automated Post-Disaster Needs Assessment dossier (NDMA format)."""
+
+    __tablename__ = "pdna_dossiers"
+
+    id = Column(String(64), primary_key=True, index=True)
+    district = Column(String(64), nullable=False, index=True)
+    event_title = Column(String(128), nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    impacted_villages_count = Column(Integer, nullable=False, default=0)
+    total_population_affected = Column(Integer, nullable=False, default=0)
+    displaced_population = Column(Integer, nullable=False, default=0)
+    infrastructure_damage_score = Column(Float, nullable=False, default=0.0)  # 0 to 10
+    estimated_economic_loss_cr = Column(Float, nullable=False, default=0.0)  # In Crores INR
+    verified_citizen_reports_count = Column(Integer, nullable=False, default=0)
+    executive_summary = Column(Text, nullable=False)
+    dossier_json = Column(JSON, nullable=False, default=dict)
+    pdf_report_path = Column(String(256), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class VillageResilienceScore(Base):
+    """Community disaster drill participation & institutional resilience rating."""
+
+    __tablename__ = "village_resilience_scores"
+
+    id = Column(String(64), primary_key=True, index=True)
+    village_id = Column(String(64), ForeignKey("villages.id"), nullable=False, index=True)
+    composite_index = Column(Float, nullable=False, default=70.0)  # 0 to 100
+    drill_participation_rate = Column(Float, nullable=False, default=0.75)
+    volunteer_readiness_score = Column(Float, nullable=False, default=0.8)
+    sensor_network_redundancy = Column(Float, nullable=False, default=0.85)
+    shelter_accessibility_score = Column(Float, nullable=False, default=0.7)
+    grade = Column(String(8), nullable=False, default="A")  # A+, A, B, C, D
+    assessed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    village = relationship("Village")
+
 
 

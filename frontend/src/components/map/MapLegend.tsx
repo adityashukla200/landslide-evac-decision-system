@@ -54,6 +54,10 @@ export const MapLegend: React.FC = () => {
         <div className="border-t border-slate-800 my-1.5 pt-1.5 space-y-1.5">
           {/* Infrastructure */}
           <div className="flex items-center gap-2">
+            <span className="w-4 h-1 rounded bg-sky-400" />
+            <span className="text-slate-300">NH-34 Valley Highway Corridor</span>
+          </div>
+          <div className="flex items-center gap-2">
             <span className="w-4 h-1 rounded bg-emerald-400" />
             <span className="text-slate-300">Recommended Evacuation Trail</span>
           </div>
