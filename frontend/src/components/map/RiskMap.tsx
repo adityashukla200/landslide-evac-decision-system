@@ -101,30 +101,32 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   };
 
-  // Base map style specification (CARTO Authenticated Tiles + Fallback OSM/ESRI/OpenTopoMap)
+  // Base map style specification (100% Reliable Free Zero-Key Basemaps: OpenStreetMap & ESRI)
   const getStyleUrl = (base: string, isDarkMode: boolean) => {
-    const cartoKey = import.meta.env.VITE_CARTO_API_KEY || 'cb1_4591_1_5387cd9e4bb0bac69e322c1a';
-
     return {
       version: 8,
       sources: {
-        'carto-voyager': {
-          type: 'raster',
-          tiles: [`https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${cartoKey}`],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors, © CARTO',
-        },
-        'carto-dark': {
-          type: 'raster',
-          tiles: [`https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?api_key=${cartoKey}`],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors, © CARTO',
-        },
         'osm-tiles': {
           type: 'raster',
           tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
           tileSize: 256,
           attribution: '© OpenStreetMap contributors',
+        },
+        'esri-dark-tiles': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+          ],
+          tileSize: 256,
+          attribution: '© Esri, HERE, Garmin, OpenStreetMap contributors',
+        },
+        'esri-dark-ref': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+          ],
+          tileSize: 256,
+          attribution: '© Esri',
         },
         'opentopo-tiles': {
           type: 'raster',
@@ -143,9 +145,9 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       },
       layers: [
         {
-          id: 'carto-voyager-layer',
+          id: 'osm-layer',
           type: 'raster',
-          source: 'carto-voyager',
+          source: 'osm-tiles',
           minzoom: 0,
           maxzoom: 19,
           layout: {
@@ -156,16 +158,29 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           },
         },
         {
-          id: 'carto-dark-layer',
+          id: 'esri-dark-layer',
           type: 'raster',
-          source: 'carto-dark',
+          source: 'esri-dark-tiles',
           minzoom: 0,
-          maxzoom: 19,
+          maxzoom: 16,
           layout: {
             visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
           },
           paint: {
             'raster-opacity': 0.95,
+          },
+        },
+        {
+          id: 'esri-dark-ref-layer',
+          type: 'raster',
+          source: 'esri-dark-ref',
+          minzoom: 0,
+          maxzoom: 16,
+          layout: {
+            visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
+          },
+          paint: {
+            'raster-opacity': 0.9,
           },
         },
         {
@@ -231,13 +246,14 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     if (!map.current || !mapLoaded) return;
     const m = map.current;
 
-    const showVoyager = layers.baseLayer === 'streets' || (layers.baseLayer === 'dark' && !isDark);
+    const showOsm = layers.baseLayer === 'streets' || (layers.baseLayer === 'dark' && !isDark);
     const showDark = layers.baseLayer === 'dark' && isDark;
     const showTerrain = layers.baseLayer === 'terrain';
     const showSat = layers.baseLayer === 'satellite';
 
-    if (m.getLayer('carto-voyager-layer')) m.setLayoutProperty('carto-voyager-layer', 'visibility', showVoyager ? 'visible' : 'none');
-    if (m.getLayer('carto-dark-layer')) m.setLayoutProperty('carto-dark-layer', 'visibility', showDark ? 'visible' : 'none');
+    if (m.getLayer('osm-layer')) m.setLayoutProperty('osm-layer', 'visibility', showOsm ? 'visible' : 'none');
+    if (m.getLayer('esri-dark-layer')) m.setLayoutProperty('esri-dark-layer', 'visibility', showDark ? 'visible' : 'none');
+    if (m.getLayer('esri-dark-ref-layer')) m.setLayoutProperty('esri-dark-ref-layer', 'visibility', showDark ? 'visible' : 'none');
     if (m.getLayer('opentopo-layer')) m.setLayoutProperty('opentopo-layer', 'visibility', showTerrain ? 'visible' : 'none');
     if (m.getLayer('satellite-layer')) m.setLayoutProperty('satellite-layer', 'visibility', showSat ? 'visible' : 'none');
   }, [isDark, mapLoaded, layers.baseLayer]);
@@ -319,7 +335,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         data: routesGeoJson,
       });
 
-      // Casing / Glow outline
+      // Casing / Glow outline (Safe Green or Active Blue glow)
       m.addLayer({
         id: 'routes-casing',
         type: 'line',
@@ -330,7 +346,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
             ['==', ['get', 'isActive'], true],
             '#38bdf8',
             ['==', ['get', 'isSelected'], true],
-            '#10b981',
+            '#059669',
             ['get', 'casingColor']
           ],
           'line-width': [
@@ -338,8 +354,8 @@ export const RiskMap: React.FC<RiskMapProps> = ({
             ['==', ['get', 'isActive'], true],
             14,
             ['==', ['get', 'isSelected'], true],
-            9,
-            ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 6],
+            10,
+            6
           ],
           'line-opacity': [
             'case',
@@ -347,7 +363,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
             0.95,
             ['==', ['get', 'isSelected'], true],
             0.85,
-            0.6,
+            0.6
           ],
           'line-blur': 1.5,
         },
@@ -363,7 +379,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           'line-color': [
             'case',
             ['==', ['get', 'isActive'], true],
-            '#059669',
+            '#047857',
             ['==', ['get', 'isRecommended'], true],
             '#10b981',
             ['get', 'color']
@@ -371,10 +387,10 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           'line-width': [
             'case',
             ['==', ['get', 'isActive'], true],
-            7,
+            8,
             ['==', ['get', 'isSelected'], true],
-            5.5,
-            ['interpolate', ['linear'], ['zoom'], 8, 2.5, 14, 4.5],
+            6,
+            4
           ],
         },
       });
@@ -386,35 +402,35 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         source: 'routes-source',
         filter: ['==', ['get', 'isBlocked'], true],
         paint: {
-          'line-color': '#ef4444',
+          'line-color': '#dc2626',
           'line-width': [
             'case',
             ['==', ['get', 'isActive'], true],
-            6,
+            7,
             ['==', ['get', 'isSelected'], true],
             5,
-            3.5,
+            3.5
           ],
           'line-dasharray': [3, 2],
         },
       });
 
-      // Line Label      // Line Label
+      // Line Label (Displays route name & distance)
       m.addLayer({
         id: 'routes-label',
         type: 'symbol',
         source: 'routes-source',
         layout: {
           'symbol-placement': 'line',
-          'text-field': ['get', 'name'],
-          'text-size': 10,
+          'text-field': ['concat', ['get', 'name'], ' (', ['get', 'lengthKm'], 'km)'],
+          'text-size': 11,
           'text-offset': [0, -1],
           'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
         },
         paint: {
           'text-color': '#f8fafc',
           'text-halo-color': '#020617',
-          'text-halo-width': 2,
+          'text-halo-width': 2.5,
         },
       });
 
@@ -1172,14 +1188,14 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       if (shelter) bounds.extend([shelter.lon, shelter.lat]);
       targetRoute.coordinates.forEach((pt) => bounds.extend(pt));
       m.fitBounds(bounds, {
-        padding: { top: 80, bottom: 80, left: 420, right: 100 },
-        maxZoom: 14.2,
+        padding: { top: 90, bottom: 90, left: 420, right: 80 },
+        maxZoom: 14.5,
         duration: 1200,
       });
     } else {
       m.flyTo({
         center: [selectedVillage.lon, selectedVillage.lat],
-        zoom: 12.5,
+        zoom: 12.8,
         essential: true,
         duration: 1200,
       });
