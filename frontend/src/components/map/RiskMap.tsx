@@ -105,6 +105,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
   const getStyleUrl = (base: string, isDarkMode: boolean) => {
     return {
       version: 8,
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
       sources: {
         'osm-tiles': {
           type: 'raster',
@@ -1169,38 +1170,8 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   }, [selectedVillage, routes]);
 
-  // Fly to selected village or fit bounds to village + evacuation routes
-  useEffect(() => {
-    if (!map.current || !mapLoaded || !selectedVillage) return;
-    const m = map.current;
-
-    const vRoutes = routes.filter((r) => r.fromVillageId === selectedVillage.id);
-    const targetRoute = (selectedRouteId && vRoutes.find((r) => r.id === selectedRouteId)) ||
-                        vRoutes.find((r) => r.isRecommended) ||
-                        vRoutes[0];
-    const shelter = shelters.find(
-      (s) => s.id === targetRoute?.toShelterId || s.villageId === selectedVillage.id
-    );
-
-    if (targetRoute && targetRoute.coordinates && targetRoute.coordinates.length > 1) {
-      const bounds = new maplibregl.LngLatBounds();
-      bounds.extend([selectedVillage.lon, selectedVillage.lat]);
-      if (shelter) bounds.extend([shelter.lon, shelter.lat]);
-      targetRoute.coordinates.forEach((pt) => bounds.extend(pt));
-      m.fitBounds(bounds, {
-        padding: { top: 90, bottom: 90, left: 420, right: 80 },
-        maxZoom: 14.5,
-        duration: 1200,
-      });
-    } else {
-      m.flyTo({
-        center: [selectedVillage.lon, selectedVillage.lat],
-        zoom: 12.8,
-        essential: true,
-        duration: 1200,
-      });
-    }
-  }, [selectedVillage, selectedRouteId, mapLoaded]);
+  // Dedicated HTML Waypoint Badges for active village's routes (Origin, Route A Blocked, Route B Safe, Shelter)
+  const routeMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   // Selected village routes & shelter calculation
   const villageRoutes = selectedVillage
@@ -1213,25 +1184,152 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     (s) => s.id === activeRoute?.toShelterId || s.villageId === selectedVillage?.id
   ) || shelters[0];
 
-  // Action: Focus evacuation path on map
+  // Action: Focus evacuation path on map (Close-up 3D view at zoom ~14.7)
   const handleFocusEvacuationPath = (routeObj?: Route) => {
     if (!map.current || !selectedVillage) return;
     const r = routeObj || activeRoute || recommendedRoute;
     const s = shelters.find((item) => item.id === r?.toShelterId) || assignedShelter;
     if (s) {
-      const bounds = new maplibregl.LngLatBounds();
-      bounds.extend([selectedVillage.lon, selectedVillage.lat]);
-      bounds.extend([s.lon, s.lat]);
-      if (r?.coordinates) {
-        r.coordinates.forEach((pt) => bounds.extend(pt));
-      }
-      map.current.fitBounds(bounds, {
-        padding: { top: 80, bottom: 80, left: 420, right: 100 },
-        maxZoom: 14.5,
-        duration: 1300,
+      const midLon = (selectedVillage.lon + s.lon) / 2;
+      const midLat = (selectedVillage.lat + s.lat) / 2;
+      map.current.flyTo({
+        center: [midLon, midLat],
+        zoom: 14.7,
+        pitch: 35,
+        bearing: -10,
+        essential: true,
+        duration: 1200,
+      });
+    } else {
+      map.current.flyTo({
+        center: [selectedVillage.lon, selectedVillage.lat],
+        zoom: 14.5,
+        pitch: 35,
+        essential: true,
+        duration: 1200,
       });
     }
   };
+
+  // Fly to selected village or focus evacuation routes when village or route changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !selectedVillage) return;
+    const m = map.current;
+
+    const vRoutes = routes.filter((r) => r.fromVillageId === selectedVillage.id);
+    const targetRoute = (selectedRouteId && vRoutes.find((r) => r.id === selectedRouteId)) ||
+                        vRoutes.find((r) => r.isRecommended) ||
+                        vRoutes[0];
+    const shelter = shelters.find(
+      (s) => s.id === targetRoute?.toShelterId || s.villageId === selectedVillage.id
+    );
+
+    if (shelter) {
+      const midLon = (selectedVillage.lon + shelter.lon) / 2;
+      const midLat = (selectedVillage.lat + shelter.lat) / 2;
+      m.flyTo({
+        center: [midLon, midLat],
+        zoom: 14.7,
+        pitch: 35,
+        bearing: -10,
+        essential: true,
+        duration: 1200,
+      });
+    } else {
+      m.flyTo({
+        center: [selectedVillage.lon, selectedVillage.lat],
+        zoom: 13.5,
+        pitch: 20,
+        essential: true,
+        duration: 1200,
+      });
+    }
+  }, [selectedVillage, selectedRouteId, mapLoaded]);
+
+  // Update prominent HTML markers along the active evacuation corridor
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const m = map.current;
+
+    // Clear previous markers
+    routeMarkersRef.current.forEach((marker) => marker.remove());
+    routeMarkersRef.current = [];
+
+    if (!selectedVillage) return;
+
+    const vRoutes = routes.filter((r) => r.fromVillageId === selectedVillage.id);
+    const targetShelter = shelters.find(
+      (s) => s.id === (activeRoute?.toShelterId || vRoutes[0]?.toShelterId) || s.villageId === selectedVillage.id
+    );
+
+    // 1. Origin Marker
+    const originEl = document.createElement('div');
+    originEl.className = 'route-origin-badge cursor-pointer';
+    originEl.innerHTML = `
+      <div style="background:#0f172a;border:2px solid #3b82f6;color:#ffffff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.7);font-family:ui-monospace,monospace;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+        <span>📍 START: ${selectedVillage.name}</span>
+      </div>
+    `;
+    const originMarker = new maplibregl.Marker({ element: originEl, anchor: 'bottom' })
+      .setLngLat([selectedVillage.lon, selectedVillage.lat])
+      .addTo(m);
+    routeMarkersRef.current.push(originMarker);
+
+    // 2. Shelter Destination Marker
+    if (targetShelter) {
+      const shelterEl = document.createElement('div');
+      shelterEl.className = 'route-shelter-badge cursor-pointer';
+      shelterEl.innerHTML = `
+        <div style="background:#082f49;border:2px solid #38bdf8;color:#e0f2fe;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.7);font-family:ui-monospace,monospace;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+          <span>⛺ SAFE HAVEN: ${targetShelter.name}</span>
+        </div>
+      `;
+      const shelterMarker = new maplibregl.Marker({ element: shelterEl, anchor: 'bottom' })
+        .setLngLat([targetShelter.lon, targetShelter.lat])
+        .addTo(m);
+      routeMarkersRef.current.push(shelterMarker);
+    }
+
+    // 3. Waypoint Badges on each Route
+    vRoutes.forEach((r) => {
+      if (!r.coordinates || r.coordinates.length < 2) return;
+      const midCoord = r.coordinates[Math.floor(r.coordinates.length / 2)] as [number, number];
+
+      const badgeEl = document.createElement('div');
+      badgeEl.className = 'route-badge cursor-pointer';
+
+      if (r.isBlocked) {
+        badgeEl.innerHTML = `
+          <div style="background:#450a0a;border:2px solid #ef4444;color:#fee2e2;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,0.8);font-family:ui-monospace,monospace;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;"></span>
+            <span>🚨 ${r.name.split('(')[0].trim()}: BLOCKED (${r.lengthKm}km)</span>
+          </div>
+        `;
+      } else {
+        badgeEl.innerHTML = `
+          <div style="background:#022c22;border:2px solid #10b981;color:#a7f3d0;font-size:10px;font-weight:800;padding:3px 8px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,0.8);font-family:ui-monospace,monospace;white-space:nowrap;display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;"></span>
+            <span>🟢 ${r.name.split('(')[0].trim()}: SAFE ALTERNATE (${r.lengthKm}km)</span>
+          </div>
+        `;
+      }
+
+      badgeEl.addEventListener('click', () => {
+        setSelectedRouteId(r.id);
+        handleFocusEvacuationPath(r);
+      });
+
+      const routeMarker = new maplibregl.Marker({ element: badgeEl, anchor: 'center' })
+        .setLngLat(midCoord)
+        .addTo(m);
+      routeMarkersRef.current.push(routeMarker);
+    });
+
+    return () => {
+      routeMarkersRef.current.forEach((marker) => marker.remove());
+      routeMarkersRef.current = [];
+    };
+  }, [selectedVillage, routes, shelters, mapLoaded]);
 
   return (
     <div
@@ -1368,23 +1466,50 @@ export const RiskMap: React.FC<RiskMapProps> = ({
                           setSelectedRouteId(recommendedRoute.id);
                           handleFocusEvacuationPath(recommendedRoute);
                         }}
-                        className="mt-1.5 w-full flex items-center justify-center gap-1 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[10px] transition-colors"
+                        className="mt-1.5 w-full flex items-center justify-center gap-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-colors shadow"
                       >
-                        <Shield className="w-3 h-3" />
+                        <Shield className="w-3.5 h-3.5" />
                         <span>Switch to Safe Alternative: {recommendedRoute.name.split('(')[0]}</span>
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Focus Button */}
-                <button
-                  onClick={() => handleFocusEvacuationPath()}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all text-[11px] shadow-lg active:scale-98"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>Focus Evacuation Corridor</span>
-                </button>
+                {/* Alternate Route Explanation Banner */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-2 mb-2 text-[9.5px] space-y-1 text-slate-300">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <Footprints className="w-3 h-3" />
+                    <span>How to follow the alternate route:</span>
+                  </div>
+                  <p className="leading-tight text-slate-400">
+                    🟢 <strong className="text-emerald-300">Route B (Green line):</strong> Follows the elevated bedrock ridge directly to the high-ground shelter.
+                  </p>
+                  <p className="leading-tight text-slate-400">
+                    🔴 <strong className="text-red-400">Route A (Red dashed):</strong> Cut off by river inundation / active landslide scarp near the valley floor.
+                  </p>
+                </div>
+
+                {/* Primary Actions: Zoom In on Route vs District View */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => handleFocusEvacuationPath(recommendedRoute || activeRoute)}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all text-[10.5px] shadow-lg active:scale-98"
+                    title="Zoom directly into the safe alternate route at mountain slope level"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    <span>Zoom Safe Route B</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      map.current?.flyTo({ center: [78.4354, 30.7268], zoom: 10.2, pitch: 0, bearing: 0, duration: 1000 });
+                    }}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-bold transition-all text-[10.5px] shadow active:scale-98"
+                    title="Reset to whole district overview"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    <span>District Overview</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-[10px] text-slate-400 leading-relaxed py-1">

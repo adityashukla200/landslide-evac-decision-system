@@ -371,22 +371,42 @@ export const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({
             <div className="flex items-center justify-between text-slate-200 font-bold border-b border-slate-800 pb-1">
               <div className="flex items-center gap-1.5">
                 <Footprints className="w-4 h-4 text-emerald-400" />
-                <span>RECOMMENDED EVACUATION ROUTE</span>
+                <span>EVACUATION ROUTES ({villageRoutes.length})</span>
               </div>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                CLEAR
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">
+                {recommendedRoute ? 'SAFE ALT READY' : 'NO ROUTE'}
               </span>
             </div>
 
-            {recommendedRoute ? (
-              <div>
-                <div className="font-bold text-slate-200 text-[11px]">{recommendedRoute.name}</div>
-                <div className="text-[10px] text-slate-400">
-                  Distance: {recommendedRoute.lengthKm} km • Walk Time: ~{recommendedRoute.estWalkMinutes} min • Severance Risk: {(recommendedRoute.cutRisk * 100).toFixed(0)}%
-                </div>
-                {recommendedRoute.description && (
-                  <div className="text-[10px] text-emerald-400/90 mt-1">{recommendedRoute.description}</div>
-                )}
+            {villageRoutes.length > 0 ? (
+              <div className="space-y-1.5">
+                {villageRoutes.map((r) => (
+                  <div
+                    key={r.id}
+                    className={`p-2 rounded border text-[11px] ${
+                      r.isBlocked
+                        ? 'bg-red-950/40 border-red-900/60 text-red-200'
+                        : 'bg-emerald-950/40 border-emerald-900/60 text-emerald-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-bold">
+                      <span>{r.name}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded font-black ${
+                        r.isBlocked ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+                      }`}>
+                        {r.isBlocked ? 'BLOCKED' : 'SAFE ROUTE'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      {r.lengthKm} km • ~{r.estWalkMinutes} min walk • Severance Risk: {(r.cutRisk * 100).toFixed(0)}%
+                    </div>
+                    {r.description && (
+                      <div className={`text-[9.5px] mt-1 ${r.isBlocked ? 'text-red-300' : 'text-emerald-300'}`}>
+                        {r.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-slate-400 text-[10px]">No route mapped</div>
