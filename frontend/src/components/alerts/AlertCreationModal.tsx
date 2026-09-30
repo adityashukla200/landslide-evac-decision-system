@@ -36,7 +36,7 @@ export const AlertCreationModal: React.FC<AlertCreationModalProps> = ({
     defaultVillageId || villages[1]?.id || 'VIL_UTK_07'
   );
   const [tier, setTier] = useState<RiskTier>(defaultTier);
-  const [language, setLanguage] = useState<'en' | 'hi'>('hi');
+  const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

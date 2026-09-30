@@ -27,7 +27,7 @@ export const CitizenPWA: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const { success, error } = useToast();
   const [selectedVillageId, setSelectedVillageId] = useState<string>('VIL_UTK_08'); // Default Maneri
-  const [language, setLanguage] = useState<'hi' | 'en'>('hi');
+  const [language, setLanguage] = useState<'hi' | 'en'>('en');
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
   const [hasCheckedInSafe, setHasCheckedInSafe] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);

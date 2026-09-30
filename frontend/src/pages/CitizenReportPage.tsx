@@ -26,7 +26,7 @@ import { useToast } from '../context/ToastContext';
 export const CitizenReportPage: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const { success: showSuccessToast, error: showErrorToast } = useToast();
-  const [language, setLanguage] = useState<'en' | 'hi'>('hi');
+  const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const [reportedFlood, setReportedFlood] = useState<boolean>(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
