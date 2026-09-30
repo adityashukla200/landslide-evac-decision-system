@@ -20,6 +20,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { getCitizenReports, CitizenReportItem } from '../../services/reportService';
+import { HAZARD_ZONES, HAZARD_POINTS } from '../../services/hazardData';
 import { useTheme } from '../../context/ThemeContext';
 
 interface RiskMapProps {
@@ -57,6 +58,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     routes: true,
     shelters: true,
     rainHeatmap: true,
+    hazards: true,
     baseLayer: isDark ? 'dark' : 'streets',
   });
 
@@ -99,34 +101,30 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     }
   };
 
-  // Base map style specification (Zero API Key required - OpenStreetMap, ESRI, OpenTopoMap)
+  // Base map style specification (CARTO Authenticated Tiles + Fallback OSM/ESRI/OpenTopoMap)
   const getStyleUrl = (base: string, isDarkMode: boolean) => {
-    const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
+    const cartoKey = import.meta.env.VITE_CARTO_API_KEY || 'cb1_4591_1_5387cd9e4bb0bac69e322c1a';
 
     return {
       version: 8,
       sources: {
+        'carto-voyager': {
+          type: 'raster',
+          tiles: [`https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${cartoKey}`],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors, © CARTO',
+        },
+        'carto-dark': {
+          type: 'raster',
+          tiles: [`https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?api_key=${cartoKey}`],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors, © CARTO',
+        },
         'osm-tiles': {
           type: 'raster',
           tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
           tileSize: 256,
           attribution: '© OpenStreetMap contributors',
-        },
-        'esri-dark-tiles': {
-          type: 'raster',
-          tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-          ],
-          tileSize: 256,
-          attribution: '© Esri, HERE, Garmin, OpenStreetMap contributors',
-        },
-        'esri-dark-ref': {
-          type: 'raster',
-          tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
-          ],
-          tileSize: 256,
-          attribution: '© Esri',
         },
         'opentopo-tiles': {
           type: 'raster',
@@ -142,59 +140,32 @@ export const RiskMap: React.FC<RiskMapProps> = ({
           tileSize: 256,
           attribution: '© Esri, Maxar, Earthstar Geographics',
         },
-        ...(cartoKey
-          ? {
-              'carto-tiles': {
-                type: 'raster',
-                tiles: [
-                  isDarkMode
-                    ? `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?api_key=${cartoKey}`
-                    : `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?api_key=${cartoKey}`,
-                ],
-                tileSize: 256,
-                attribution: '© OpenStreetMap contributors, © CARTO',
-              },
-            }
-          : {}),
       },
       layers: [
         {
-          id: 'osm-layer',
+          id: 'carto-voyager-layer',
           type: 'raster',
-          source: 'osm-tiles',
+          source: 'carto-voyager',
           minzoom: 0,
           maxzoom: 19,
           layout: {
             visibility: base === 'streets' || (base === 'dark' && !isDarkMode) ? 'visible' : 'none',
           },
           paint: {
-            'raster-opacity': 0.95,
+            'raster-opacity': 0.96,
           },
         },
         {
-          id: 'esri-dark-layer',
+          id: 'carto-dark-layer',
           type: 'raster',
-          source: 'esri-dark-tiles',
+          source: 'carto-dark',
           minzoom: 0,
-          maxzoom: 16,
+          maxzoom: 19,
           layout: {
             visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
           },
           paint: {
             'raster-opacity': 0.95,
-          },
-        },
-        {
-          id: 'esri-dark-ref-layer',
-          type: 'raster',
-          source: 'esri-dark-ref',
-          minzoom: 0,
-          maxzoom: 16,
-          layout: {
-            visibility: base === 'dark' && isDarkMode ? 'visible' : 'none',
-          },
-          paint: {
-            'raster-opacity': 0.9,
           },
         },
         {
@@ -260,14 +231,13 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     if (!map.current || !mapLoaded) return;
     const m = map.current;
 
-    const showOsm = layers.baseLayer === 'streets' || (layers.baseLayer === 'dark' && !isDark);
+    const showVoyager = layers.baseLayer === 'streets' || (layers.baseLayer === 'dark' && !isDark);
     const showDark = layers.baseLayer === 'dark' && isDark;
     const showTerrain = layers.baseLayer === 'terrain';
     const showSat = layers.baseLayer === 'satellite';
 
-    if (m.getLayer('osm-layer')) m.setLayoutProperty('osm-layer', 'visibility', showOsm ? 'visible' : 'none');
-    if (m.getLayer('esri-dark-layer')) m.setLayoutProperty('esri-dark-layer', 'visibility', showDark ? 'visible' : 'none');
-    if (m.getLayer('esri-dark-ref-layer')) m.setLayoutProperty('esri-dark-ref-layer', 'visibility', showDark ? 'visible' : 'none');
+    if (m.getLayer('carto-voyager-layer')) m.setLayoutProperty('carto-voyager-layer', 'visibility', showVoyager ? 'visible' : 'none');
+    if (m.getLayer('carto-dark-layer')) m.setLayoutProperty('carto-dark-layer', 'visibility', showDark ? 'visible' : 'none');
     if (m.getLayer('opentopo-layer')) m.setLayoutProperty('opentopo-layer', 'visibility', showTerrain ? 'visible' : 'none');
     if (m.getLayer('satellite-layer')) m.setLayoutProperty('satellite-layer', 'visibility', showSat ? 'visible' : 'none');
   }, [isDark, mapLoaded, layers.baseLayer]);
@@ -355,67 +325,81 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         type: 'line',
         source: 'routes-source',
         paint: {
-          'line-color': ['case', ['get', 'isActive'], '#38bdf8', ['get', 'casingColor']],
+          'line-color': [
+            'case',
+            ['==', ['get', 'isActive'], true],
+            '#38bdf8',
+            ['==', ['get', 'isSelected'], true],
+            '#10b981',
+            ['get', 'casingColor']
+          ],
           'line-width': [
             'case',
-            ['get', 'isActive'],
-            12,
-            ['get', 'isSelected'],
-            8,
+            ['==', ['get', 'isActive'], true],
+            14,
+            ['==', ['get', 'isSelected'], true],
+            9,
             ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 6],
           ],
           'line-opacity': [
             'case',
-            ['get', 'isActive'],
+            ['==', ['get', 'isActive'], true],
             0.95,
-            ['get', 'isSelected'],
-            0.8,
-            0.5,
+            ['==', ['get', 'isSelected'], true],
+            0.85,
+            0.6,
           ],
           'line-blur': 1.5,
         },
       });
 
-      // Core Road / Trail Line (Solid for Open Trails & Highways)
+      // Core Road / Trail Line (Solid for Open Trails & Highways - Route B Bold Emerald)
       m.addLayer({
         id: 'routes-line',
         type: 'line',
         source: 'routes-source',
         filter: ['!=', ['get', 'isBlocked'], true],
         paint: {
-          'line-color': ['get', 'color'],
+          'line-color': [
+            'case',
+            ['==', ['get', 'isActive'], true],
+            '#059669',
+            ['==', ['get', 'isRecommended'], true],
+            '#10b981',
+            ['get', 'color']
+          ],
           'line-width': [
             'case',
-            ['get', 'isActive'],
-            6,
-            ['get', 'isSelected'],
-            4.5,
-            ['interpolate', ['linear'], ['zoom'], 8, 2, 14, 3.5],
+            ['==', ['get', 'isActive'], true],
+            7,
+            ['==', ['get', 'isSelected'], true],
+            5.5,
+            ['interpolate', ['linear'], ['zoom'], 8, 2.5, 14, 4.5],
           ],
         },
       });
 
-      // Blocked / Severed Routes Line (Dashed)
+      // Blocked / Severed Routes Line (Dashed Red - Route A)
       m.addLayer({
         id: 'routes-line-blocked',
         type: 'line',
         source: 'routes-source',
         filter: ['==', ['get', 'isBlocked'], true],
         paint: {
-          'line-color': ['get', 'color'],
+          'line-color': '#ef4444',
           'line-width': [
             'case',
-            ['get', 'isActive'],
-            5.5,
-            ['get', 'isSelected'],
-            4,
-            2.5,
+            ['==', ['get', 'isActive'], true],
+            6,
+            ['==', ['get', 'isSelected'], true],
+            5,
+            3.5,
           ],
-          'line-dasharray': [2, 2],
+          'line-dasharray': [3, 2],
         },
       });
 
-      // Line Label
+      // Line Label      // Line Label
       m.addLayer({
         id: 'routes-label',
         type: 'symbol',
@@ -497,6 +481,185 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       });
     }
   }, [routes, villages, shelters, selectedVillage, selectedRouteId, mapLoaded]);
+
+
+  // 1.5 Update Landslide & Flash Flood Hazard Zones & Points
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const m = map.current;
+
+    // A. Hazard Zones (Polygons for Inundation & Landslide Scarps)
+    const hazardZonesGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: HAZARD_ZONES.map((hz) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [hz.coordinates],
+        },
+        properties: {
+          id: hz.id,
+          name: hz.name,
+          type: hz.type,
+          severity: hz.severity,
+          color: hz.color,
+          description: hz.description,
+          triggerThreshold: hz.triggerThreshold,
+        },
+      })),
+    };
+
+    if (m.getSource('hazard-zones-source')) {
+      (m.getSource('hazard-zones-source') as maplibregl.GeoJSONSource).setData(hazardZonesGeoJson);
+    } else {
+      m.addSource('hazard-zones-source', {
+        type: 'geojson',
+        data: hazardZonesGeoJson,
+      });
+
+      // Shaded Inundation & Landslide Polygon Fill
+      m.addLayer({
+        id: 'hazard-zones-fill',
+        type: 'fill',
+        source: 'hazard-zones-source',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.28,
+        },
+      });
+
+      // Hazard Polygon Border Outline
+      m.addLayer({
+        id: 'hazard-zones-line',
+        type: 'line',
+        source: 'hazard-zones-source',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2.5,
+          'line-dasharray': [2, 1],
+        },
+      });
+
+      // Hazard Zone Text Label
+      m.addLayer({
+        id: 'hazard-zones-label',
+        type: 'symbol',
+        source: 'hazard-zones-source',
+        layout: {
+          'text-field': ['concat', '⚠️ ', ['get', 'name']],
+          'text-size': 10,
+          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+        },
+        paint: {
+          'text-color': '#f8fafc',
+          'text-halo-color': '#0f172a',
+          'text-halo-width': 2,
+        },
+      });
+
+      // Hazard Zone Click Popup
+      m.on('click', 'hazard-zones-fill', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const props = e.features[0].properties as any;
+        const lngLat = e.lngLat;
+
+        new maplibregl.Popup({ offset: 10, maxWidth: '300px' })
+          .setLngLat(lngLat)
+          .setHTML(`
+            <div style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0f172a;color:#f8fafc;padding:12px;border-radius:8px;border:1px solid #475569;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <span style="background:${props.color};color:#ffffff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;">
+                  ${props.severity} ${props.type.replace('_', ' ')}
+                </span>
+              </div>
+              <h4 style="font-size:13px;font-weight:700;margin:0 0 6px 0;color:#f1f5f9;">${props.name}</h4>
+              <p style="font-size:11px;color:#cbd5e1;line-height:1.4;margin:0 0 6px 0;">${props.description}</p>
+              <div style="font-size:10px;color:#f59e0b;background:#1e293b;padding:6px;border-radius:4px;">
+                <b>Critical Threshold:</b> ${props.triggerThreshold}
+              </div>
+            </div>
+          `)
+          .addTo(m);
+      });
+    }
+
+    // B. Hazard Breach Points & Road Severance Markers
+    const hazardPointsGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: HAZARD_POINTS.map((hp) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [hp.lon, hp.lat],
+        },
+        properties: {
+          id: hp.id,
+          name: hp.name,
+          type: hp.type,
+          severity: hp.severity,
+          description: hp.description,
+          historicalEvent: hp.historicalEvent || '',
+          color: hp.type === 'FLASH_FLOOD' ? '#0284c7' : '#dc2626',
+        },
+      })),
+    };
+
+    if (m.getSource('hazard-points-source')) {
+      (m.getSource('hazard-points-source') as maplibregl.GeoJSONSource).setData(hazardPointsGeoJson);
+    } else {
+      m.addSource('hazard-points-source', {
+        type: 'geojson',
+        data: hazardPointsGeoJson,
+      });
+
+      // Hazard Point Pulsing Glow
+      m.addLayer({
+        id: 'hazard-points-glow',
+        type: 'circle',
+        source: 'hazard-points-source',
+        paint: {
+          'circle-radius': 14,
+          'circle-color': ['get', 'color'],
+          'circle-opacity': 0.45,
+          'circle-blur': 0.6,
+        },
+      });
+
+      // Hazard Point Pin Dot
+      m.addLayer({
+        id: 'hazard-points-circle',
+        type: 'circle',
+        source: 'hazard-points-source',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': ['get', 'color'],
+          'circle-stroke-width': 2.5,
+          'circle-stroke-color': '#ffffff',
+        },
+      });
+
+      // Hazard Point Click
+      m.on('click', 'hazard-points-circle', (e) => {
+        if (!e.features || !e.features[0]) return;
+        const props = e.features[0].properties as any;
+        const coords = (e.features[0].geometry as GeoJSON.Point).coordinates as [number, number];
+
+        new maplibregl.Popup({ offset: 12, maxWidth: '280px' })
+          .setLngLat(coords)
+          .setHTML(`
+            <div style="font-family:ui-sans-serif,system-ui,sans-serif;background:#0f172a;color:#f8fafc;padding:12px;border-radius:8px;border:1px solid #dc2626;">
+              <div style="font-size:10px;font-weight:800;color:#ef4444;margin-bottom:4px;">
+                🚨 ROAD SEVERANCE / HAZARD POINT
+              </div>
+              <h4 style="font-size:12px;font-weight:700;margin:0 0 6px 0;color:#f1f5f9;">${props.name}</h4>
+              <p style="font-size:11px;color:#cbd5e1;line-height:1.4;margin:0 0 6px 0;">${props.description}</p>
+              ${props.historicalEvent ? `<div style="font-size:9.5px;color:#94a3b8;border-top:1px solid #334155;padding-top:4px;"><b>Precedent:</b> ${props.historicalEvent}</div>` : ''}
+            </div>
+          `)
+          .addTo(m);
+      });
+    }
+  }, [mapLoaded]);
 
   // 2. Update High-Ground Relief Shelters GeoJSON Layer
   useEffect(() => {
@@ -948,6 +1111,12 @@ export const RiskMap: React.FC<RiskMapProps> = ({
     if (!map.current || !mapLoaded) return;
     const m = map.current;
 
+    // Hazards
+    const hazardVis = layers.hazards !== false ? 'visible' : 'none';
+    ['hazard-zones-fill', 'hazard-zones-line', 'hazard-zones-label', 'hazard-points-glow', 'hazard-points-circle'].forEach((layerId) => {
+      if (m.getLayer(layerId)) m.setLayoutProperty(layerId, 'visibility', hazardVis);
+    });
+
     // Routes
     const routeVis = layers.routes ? 'visible' : 'none';
     ['routes-casing', 'routes-line', 'routes-line-blocked', 'routes-label'].forEach((layerId) => {
@@ -1003,7 +1172,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
       if (shelter) bounds.extend([shelter.lon, shelter.lat]);
       targetRoute.coordinates.forEach((pt) => bounds.extend(pt));
       m.fitBounds(bounds, {
-        padding: { top: 90, bottom: 90, left: 140, right: 400 },
+        padding: { top: 80, bottom: 80, left: 420, right: 100 },
         maxZoom: 14.2,
         duration: 1200,
       });
@@ -1041,7 +1210,7 @@ export const RiskMap: React.FC<RiskMapProps> = ({
         r.coordinates.forEach((pt) => bounds.extend(pt));
       }
       map.current.fitBounds(bounds, {
-        padding: { top: 80, bottom: 80, left: 120, right: 400 },
+        padding: { top: 80, bottom: 80, left: 420, right: 100 },
         maxZoom: 14.5,
         duration: 1300,
       });

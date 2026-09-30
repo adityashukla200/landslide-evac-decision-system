@@ -8,6 +8,7 @@ export interface ActiveLayers {
   shelters: boolean;
   rainHeatmap: boolean;
   citizenReports: boolean;
+  hazards: boolean;
   baseLayer: 'streets' | 'terrain' | 'satellite' | 'dark';
 }
 
@@ -85,6 +86,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
             { key: 'villages', label: 'Village Risk Nodes', count: '25' },
             { key: 'citizenReports', label: 'Citizen Ground Reports', count: 'Live' },
             { key: 'routes', label: 'Evacuation Trails & Highway', count: '16' },
+            { key: 'hazards', label: 'Landslide & Flood Hazards', count: '5 Zones' },
             { key: 'shelters', label: 'High-Ground Shelters', count: '8' },
             { key: 'sensors', label: 'IoT Telemetry Sensors', count: '6' },
             { key: 'rainHeatmap', label: 'Precipitation Grid', count: 'Radar' },
