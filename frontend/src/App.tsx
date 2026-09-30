@@ -2,7 +2,6 @@ import React, { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
-import { ScenarioBar } from './components/common/ScenarioBar';
 import { AlertCreationModal } from './components/alerts/AlertCreationModal';
 import { OfficerLoginModal } from './components/auth/OfficerLoginModal';
 import { AppLoadingScreen } from './components/common/AppLoadingScreen';
@@ -30,9 +29,6 @@ const MainLayout: React.FC<{ onOpenAlertModal: () => void }> = ({ onOpenAlertMod
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-orange-500 selection:text-white transition-colors duration-200">
       {/* Top Mission Control Header */}
       <Header onOpenAlertModal={onOpenAlertModal} />
-
-      {/* SIH Scenario Controller Bar */}
-      <ScenarioBar />
 
       {/* Main Body with Sidebar + Content Outlet */}
       <div className="flex flex-1 overflow-hidden relative">
